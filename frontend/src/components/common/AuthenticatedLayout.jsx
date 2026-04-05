@@ -29,6 +29,16 @@ const userNavItems = [
   { to: "/profile", label: "Profile", icon: HiOutlineUser },
 ];
 
+const adminNavItems = [
+  { to: "/admin", label: "Admin Hub", icon: HiOutlineShieldCheck },
+  { to: "/bookings/admin", label: "Bookings", icon: HiOutlineClipboardDocumentList },
+  { to: "/admin/tickets", label: "Tickets", icon: HiOutlineWrenchScrewdriver },
+  { to: "/admin/resources", label: "Resources", icon: HiOutlineInboxStack },
+  { to: "/admin/users", label: "Users", icon: HiOutlineUserGroup },
+  { to: "/notifications", label: "Notifications", icon: HiOutlineBell },
+  { to: "/profile", label: "Profile", icon: HiOutlineUser },
+];
+
 function AuthenticatedLayout({ title, subtitle, children }) {
   const { user } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -92,23 +102,16 @@ function AuthenticatedLayout({ title, subtitle, children }) {
             <div className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
               Menu
             </div>
-            {userNavItems.map((item) => (
-              <NavItem key={item.to} {...item} />
-            ))}
+            {user?.role === "ADMIN" ? (
+              adminNavItems.map((item) => (
+                <NavItem key={item.to} {...item} />
+              ))
+            ) : (
+              userNavItems.map((item) => (
+                <NavItem key={item.to} {...item} />
+              ))
+            )}
           </div>
-
-          {user?.role === "ADMIN" && (
-            <div className="mt-8 space-y-1">
-              <div className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Administration
-              </div>
-              <NavItem to="/admin" label="Admin Hub" icon={HiOutlineShieldCheck} />
-              <NavItem to="/bookings/admin" label="Bookings" icon={HiOutlineClipboardDocumentList} />
-              <NavItem to="/admin/tickets" label="Tickets" icon={HiOutlineWrenchScrewdriver} />
-              <NavItem to="/admin/resources" label="Resources" icon={HiOutlineInboxStack} />
-              <NavItem to="/admin/users" label="Users" icon={HiOutlineUserGroup} />
-            </div>
-          )}
 
           {user?.role === "TECHNICIAN" && (
             <div className="mt-8 space-y-1">
