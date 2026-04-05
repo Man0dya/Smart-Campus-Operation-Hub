@@ -71,6 +71,12 @@ function AdminDashboardPage() {
       tone: "bg-emerald-50 border-emerald-200 text-emerald-900",
     },
     {
+      to: "/admin/users",
+      title: "User & Role Access",
+      desc: "Assign USER, TECHNICIAN, or ADMIN roles for dashboard access.",
+      tone: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-900",
+    },
+    {
       to: "/resources",
       title: "Live Resource Catalogue",
       desc: "Audit what users can currently discover and book.",

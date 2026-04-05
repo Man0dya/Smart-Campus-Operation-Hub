@@ -32,18 +32,27 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         Optional<User> existingUser = userRepository.findByEmail(email);
 
+        User user;
         if (existingUser.isEmpty()) {
-            User user = User.builder()
+            user = User.builder()
                     .googleId(googleId)
                     .name(name)
                     .email(email)
                     .profilePicture(picture)
                     .role(Role.USER)
                     .build();
-
-            userRepository.save(user);
+            user = userRepository.save(user);
+        } else {
+            user = existingUser.get();
+            user.setGoogleId(googleId);
+            user.setName(name);
+            user.setProfilePicture(picture);
+            if (user.getRole() == null) {
+                user.setRole(Role.USER);
+            }
+            user = userRepository.save(user);
         }
 
-        return oAuth2User;
+        return AppUserPrincipal.fromUser(user, attributes);
     }
 }
