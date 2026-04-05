@@ -9,6 +9,9 @@ import CreateTicketPage from "../pages/CreateTicketPage";
 import TicketDetailsPage from "../pages/TicketDetailsPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import ProfilePage from "../pages/ProfilePage";
+import AdminDashboardPage from "../pages/AdminDashboardPage";
+import AdminResourcesPage from "../pages/AdminResourcesPage";
+import AdminTicketsPage from "../pages/AdminTicketsPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import RoleRoute from "../components/common/RoleRoute";
 
@@ -97,6 +100,39 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={["ADMIN"]}>
+                <AdminDashboardPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/resources"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={["ADMIN"]}>
+                <AdminResourcesPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/tickets"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={["ADMIN"]}>
+                <AdminTicketsPage />
+              </RoleRoute>
             </ProtectedRoute>
           }
         />

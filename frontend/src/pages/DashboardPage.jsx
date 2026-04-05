@@ -65,15 +65,27 @@ function DashboardPage() {
           </Link>
         ))}
         {user?.role === "ADMIN" && (
-          <Link
-            to="/bookings/admin"
-            className="panel block border-amber-200 bg-amber-50 transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <h3 className="mb-2 text-lg font-bold text-amber-900">Admin Booking Queue</h3>
-            <p className="text-sm text-amber-800">
-              Review and process pending booking requests with approval or rejection reasons.
-            </p>
-          </Link>
+          <>
+            <Link
+              to="/admin"
+              className="panel block border-indigo-200 bg-indigo-50 transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <h3 className="mb-2 text-lg font-bold text-indigo-900">Admin Control Center</h3>
+              <p className="text-sm text-indigo-800">
+                Open the full admin dashboard for booking, ticket, and resource management.
+              </p>
+            </Link>
+
+            <Link
+              to="/bookings/admin"
+              className="panel block border-amber-200 bg-amber-50 transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <h3 className="mb-2 text-lg font-bold text-amber-900">Admin Booking Queue</h3>
+              <p className="text-sm text-amber-800">
+                Review and process pending booking requests with approval or rejection reasons.
+              </p>
+            </Link>
+          </>
         )}
       </section>
 
