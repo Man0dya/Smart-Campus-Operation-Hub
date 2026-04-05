@@ -1,0 +1,129 @@
+package com.smartcampus.controller;
+
+import com.smartcampus.enums.Role;
+import com.smartcampus.enums.TicketStatus;
+import com.smartcampus.model.Attachment;
+import com.smartcampus.model.Ticket;
+import com.smartcampus.model.User;
+import com.smartcampus.service.CurrentUserService;
+import com.smartcampus.service.TicketAttachmentStorageService;
+import com.smartcampus.service.TicketService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/tickets")
+public class TicketController {
+
+    private final TicketService ticketService;
+    private final CurrentUserService currentUserService;
+    private final TicketAttachmentStorageService ticketAttachmentStorageService;
+
+    public TicketController(TicketService ticketService,
+                            CurrentUserService currentUserService,
+                            TicketAttachmentStorageService ticketAttachmentStorageService) {
+        this.ticketService = ticketService;
+        this.currentUserService = currentUserService;
+        this.ticketAttachmentStorageService = ticketAttachmentStorageService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Ticket> createTicket(@RequestBody Ticket ticket,
+                                               @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        ticket.setReportedBy(user.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(ticket));
+    }
+
+    @GetMapping("/my")
+    public List<Ticket> getMyTickets(@AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        return ticketService.getMyTickets(user.getId());
+    }
+
+    @GetMapping
+    public List<Ticket> getAllTickets(@AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        currentUserService.requireAdminOrTechnician(user);
+        return ticketService.getAllTickets();
+    }
+
+    @GetMapping("/{id}")
+    public Ticket getTicketById(@PathVariable String id,
+                                @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        Ticket ticket = ticketService.getTicketById(id);
+        boolean actorIsAdminOrTech = user.getRole() == Role.ADMIN || user.getRole() == Role.TECHNICIAN;
+        ticketService.ensureTicketAccess(ticket, user, actorIsAdminOrTech);
+        return ticket;
+    }
+
+    @PatchMapping("/{id}/status")
+    public Ticket updateTicketStatus(@PathVariable String id,
+                                     @RequestBody Map<String, String> request,
+                                     @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        boolean actorIsAdminOrTech = user.getRole() == Role.ADMIN || user.getRole() == Role.TECHNICIAN;
+
+        String statusValue = request.get("status");
+        if (statusValue == null || statusValue.isBlank()) {
+            throw new IllegalArgumentException("status is required.");
+        }
+
+        TicketStatus status = TicketStatus.valueOf(statusValue.toUpperCase());
+        String assignedTo = request.get("assignedTo");
+        String resolutionNotes = request.get("resolutionNotes");
+
+        return ticketService.updateTicketStatus(id, status, assignedTo, resolutionNotes, user, actorIsAdminOrTech);
+    }
+
+    @PostMapping(path = "/{id}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Ticket uploadAttachments(@PathVariable String id,
+                                    @RequestParam("files") MultipartFile[] files,
+                                    @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        Ticket ticket = ticketService.getTicketById(id);
+        boolean actorIsAdminOrTech = user.getRole() == Role.ADMIN || user.getRole() == Role.TECHNICIAN;
+        ticketService.ensureTicketAccess(ticket, user, actorIsAdminOrTech);
+
+        if (files == null || files.length == 0) {
+            throw new IllegalArgumentException("At least one attachment is required.");
+        }
+
+        List<String> storedFileNames = ticketAttachmentStorageService.storeTicketImages(files);
+        List<Attachment> attachments = storedFileNames.stream()
+                .map(fileName -> Attachment.builder()
+                        .fileName(fileName)
+                        .fileUrl("/api/tickets/attachments/" + fileName)
+                        .build())
+                .toList();
+
+        return ticketService.addAttachments(id, attachments);
+    }
+
+    @GetMapping("/attachments/{fileName:.+}")
+    public ResponseEntity<Resource> getAttachment(@PathVariable String fileName) {
+        Resource file = ticketAttachmentStorageService.loadAsResource(fileName);
+        MediaType mediaType = MediaTypeFactory.getMediaType(file).orElse(MediaType.APPLICATION_OCTET_STREAM);
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .body(file);
+    }
+}
