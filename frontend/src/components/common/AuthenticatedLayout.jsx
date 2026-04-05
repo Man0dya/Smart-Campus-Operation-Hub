@@ -41,6 +41,20 @@ function AuthenticatedLayout({ title, subtitle, children }) {
 
         <div className="app-shell pt-0">
           <nav className="flex flex-wrap gap-2">
+            {user?.role === "ADMIN" && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    isActive
+                      ? "bg-indigo-100 text-indigo-800"
+                      : "text-indigo-700 hover:bg-indigo-50"
+                  }`
+                }
+              >
+                Admin Hub
+              </NavLink>
+            )}
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -57,18 +71,44 @@ function AuthenticatedLayout({ title, subtitle, children }) {
               </NavLink>
             ))}
             {user?.role === "ADMIN" && (
-              <NavLink
-                to="/bookings/admin"
-                className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 text-sm font-medium transition ${
-                    isActive
-                      ? "bg-amber-100 text-amber-800"
-                      : "text-amber-700 hover:bg-amber-50"
-                  }`
-                }
-              >
-                Admin Bookings
-              </NavLink>
+              <>
+                <NavLink
+                  to="/bookings/admin"
+                  className={({ isActive }) =>
+                    `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      isActive
+                        ? "bg-amber-100 text-amber-800"
+                        : "text-amber-700 hover:bg-amber-50"
+                    }`
+                  }
+                >
+                  Admin Bookings
+                </NavLink>
+                <NavLink
+                  to="/admin/tickets"
+                  className={({ isActive }) =>
+                    `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      isActive
+                        ? "bg-cyan-100 text-cyan-800"
+                        : "text-cyan-700 hover:bg-cyan-50"
+                    }`
+                  }
+                >
+                  Admin Tickets
+                </NavLink>
+                <NavLink
+                  to="/admin/resources"
+                  className={({ isActive }) =>
+                    `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      isActive
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "text-emerald-700 hover:bg-emerald-50"
+                    }`
+                  }
+                >
+                  Admin Resources
+                </NavLink>
+              </>
             )}
           </nav>
         </div>
