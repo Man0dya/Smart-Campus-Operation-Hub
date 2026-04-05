@@ -102,14 +102,6 @@ function AdminDashboardPage() {
       tone: "bg-slate-100 text-slate-700 border-slate-200",
       gradient: "from-slate-50 to-white hover:border-slate-300",
       icon: HiOutlineRectangleGroup
-    },
-    {
-      to: "/dashboard",
-      title: "Standard Dashboard",
-      desc: "Quickly switch into user-level experience validation.",
-      tone: "bg-indigo-50 text-indigo-700 border-indigo-100",
-      gradient: "from-indigo-50 to-white hover:border-indigo-300",
-      icon: HiOutlineHome
     }
   ];
 

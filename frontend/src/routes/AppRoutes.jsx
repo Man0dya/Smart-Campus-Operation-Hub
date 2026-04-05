@@ -26,7 +26,9 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <RoleRoute allowedRoles={["USER", "TECHNICIAN"]}>
+                <DashboardPage />
+              </RoleRoute>
             </ProtectedRoute>
           }
         />
