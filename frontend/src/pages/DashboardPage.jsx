@@ -87,6 +87,18 @@ function DashboardPage() {
             </Link>
           </>
         )}
+
+        {user?.role === "TECHNICIAN" && (
+          <Link
+            to="/admin/tickets"
+            className="panel block border-cyan-200 bg-cyan-50 transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <h3 className="mb-2 text-lg font-bold text-cyan-900">Technician Ticket Queue</h3>
+            <p className="text-sm text-cyan-800">
+              Review open incidents, update status, and attach resolution notes from one command view.
+            </p>
+          </Link>
+        )}
       </section>
 
       <section className="mt-6 panel">

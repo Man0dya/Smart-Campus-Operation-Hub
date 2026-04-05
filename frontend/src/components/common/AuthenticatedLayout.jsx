@@ -108,7 +108,34 @@ function AuthenticatedLayout({ title, subtitle, children }) {
                 >
                   Admin Resources
                 </NavLink>
+                <NavLink
+                  to="/admin/users"
+                  className={({ isActive }) =>
+                    `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      isActive
+                        ? "bg-fuchsia-100 text-fuchsia-800"
+                        : "text-fuchsia-700 hover:bg-fuchsia-50"
+                    }`
+                  }
+                >
+                  Admin Users
+                </NavLink>
               </>
+            )}
+
+            {user?.role === "TECHNICIAN" && (
+              <NavLink
+                to="/admin/tickets"
+                className={({ isActive }) =>
+                  `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    isActive
+                      ? "bg-cyan-100 text-cyan-800"
+                      : "text-cyan-700 hover:bg-cyan-50"
+                  }`
+                }
+              >
+                Ticket Command
+              </NavLink>
             )}
           </nav>
         </div>

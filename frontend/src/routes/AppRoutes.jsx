@@ -12,6 +12,7 @@ import ProfilePage from "../pages/ProfilePage";
 import AdminDashboardPage from "../pages/AdminDashboardPage";
 import AdminResourcesPage from "../pages/AdminResourcesPage";
 import AdminTicketsPage from "../pages/AdminTicketsPage";
+import AdminUsersPage from "../pages/AdminUsersPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import RoleRoute from "../components/common/RoleRoute";
 
@@ -130,8 +131,19 @@ function AppRoutes() {
           path="/admin/tickets"
           element={
             <ProtectedRoute>
-              <RoleRoute allowedRoles={["ADMIN"]}>
+              <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
                 <AdminTicketsPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={["ADMIN"]}>
+                <AdminUsersPage />
               </RoleRoute>
             </ProtectedRoute>
           }

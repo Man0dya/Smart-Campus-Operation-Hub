@@ -1,16 +1,24 @@
 package com.smartcampus.backend.config;
 
 import com.smartcampus.security.CustomOAuth2UserService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Configuration
 public class SecurityConfig {
@@ -27,7 +35,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         AuthenticationSuccessHandler successHandler = (request, response, authentication) ->
-                response.sendRedirect(frontendUrl + "/dashboard");
+                response.sendRedirect(frontendUrl + resolveSuccessPath(authentication));
 
         http
                 .cors(Customizer.withDefaults())
@@ -50,4 +58,31 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
+
+        @Bean
+        public org.springframework.security.authentication.AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration authenticationConfiguration) throws Exception {
+                return authenticationConfiguration.getAuthenticationManager();
+        }
+
+        private String resolveSuccessPath(Authentication authentication) {
+                Set<String> authorities = authentication.getAuthorities().stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .collect(Collectors.toSet());
+
+                if (authorities.contains("ROLE_ADMIN")) {
+                        return "/admin";
+                }
+
+                if (authorities.contains("ROLE_TECHNICIAN")) {
+                        return "/admin/tickets";
+                }
+
+                return "/dashboard";
+        }
 }

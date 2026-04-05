@@ -1,6 +1,7 @@
 package com.smartcampus.model;
 
 import com.smartcampus.enums.Role;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -19,6 +20,8 @@ public class User {
     private String googleId;
     private String name;
     private String email;
+    @JsonIgnore
+    private String passwordHash;
     private String profilePicture;
     private Role role;
 }
