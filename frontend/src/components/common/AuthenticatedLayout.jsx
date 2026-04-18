@@ -20,23 +20,21 @@ import {
 } from "react-icons/hi2";
 
 const userNavItems = [
-  { to: "/dashboard", label: "Dashboard", icon: HiOutlineHome },
-  { to: "/resources", label: "Resources", icon: HiOutlineRectangleGroup },
-  { to: "/bookings/create", label: "Book Resource", icon: HiOutlineCalendarDays },
-  { to: "/bookings/my", label: "My Bookings", icon: HiOutlineBookmarkSquare },
-  { to: "/tickets/create", label: "Report Issue", icon: HiOutlineExclamationTriangle },
-  { to: "/notifications", label: "Notifications", icon: HiOutlineBell },
-  { to: "/profile", label: "Profile", icon: HiOutlineUser },
+  { to: "/dashboard", label: "Dashboard", icon: HiOutlineHome, end: true },
+  { to: "/resources", label: "Resources", icon: HiOutlineRectangleGroup, end: true },
+  { to: "/bookings/create", label: "Book Resource", icon: HiOutlineCalendarDays, end: true },
+  { to: "/bookings/my", label: "My Bookings", icon: HiOutlineBookmarkSquare, end: true },
+  { to: "/tickets/create", label: "Report Issue", icon: HiOutlineExclamationTriangle, end: true },
+  { to: "/notifications", label: "Notifications", icon: HiOutlineBell, end: true },
 ];
 
 const adminNavItems = [
-  { to: "/admin", label: "Admin Hub", icon: HiOutlineShieldCheck },
-  { to: "/bookings/admin", label: "Bookings", icon: HiOutlineClipboardDocumentList },
-  { to: "/admin/tickets", label: "Tickets", icon: HiOutlineWrenchScrewdriver },
-  { to: "/admin/resources", label: "Resources", icon: HiOutlineInboxStack },
-  { to: "/admin/users", label: "Users", icon: HiOutlineUserGroup },
-  { to: "/notifications", label: "Notifications", icon: HiOutlineBell },
-  { to: "/profile", label: "Profile", icon: HiOutlineUser },
+  { to: "/admin", label: "Admin Hub", icon: HiOutlineShieldCheck, end: true },
+  { to: "/bookings/admin", label: "Bookings", icon: HiOutlineClipboardDocumentList, end: true },
+  { to: "/admin/tickets", label: "Tickets", icon: HiOutlineWrenchScrewdriver, end: true },
+  { to: "/admin/resources", label: "Resources", icon: HiOutlineInboxStack, end: true },
+  { to: "/admin/users", label: "Users", icon: HiOutlineUserGroup, end: true },
+  { to: "/notifications", label: "Notifications", icon: HiOutlineBell, end: true },
 ];
 
 function AuthenticatedLayout({ title, subtitle, children }) {
@@ -47,15 +45,16 @@ function AuthenticatedLayout({ title, subtitle, children }) {
     window.location.href = "http://localhost:8080/logout";
   };
 
-  const NavItem = ({ to, label, icon: Icon }) => (
+  const NavItem = ({ to, label, icon: Icon, end = false }) => (
     <NavLink
       to={to}
+      end={end}
       onClick={() => setSidebarOpen(false)}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        `flex items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
           isActive
-            ? "bg-cyan-50 text-cyan-700"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            ? "border-slate-300 bg-slate-900 text-white"
+            : "border-transparent text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900"
         }`
       }
     >
@@ -65,11 +64,11 @@ function AuthenticatedLayout({ title, subtitle, children }) {
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-transparent">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/60 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -80,17 +79,17 @@ function AuthenticatedLayout({ title, subtitle, children }) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-slate-100">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-600 text-white font-bold">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-slate-900 text-white font-bold">
               SC
             </div>
-            <span className="text-sm font-bold tracking-wide text-slate-800 uppercase">
+            <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-700">
               Smart Campus
             </span>
           </div>
           <button 
-            className="lg:hidden text-slate-500 hover:text-slate-700"
+            className="text-slate-400 hover:text-slate-700 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           >
             <HiXMark className="h-6 w-6" />
@@ -99,7 +98,7 @@ function AuthenticatedLayout({ title, subtitle, children }) {
 
         <div className="flex flex-1 flex-col overflow-y-auto px-4 py-6">
           <div className="space-y-1">
-            <div className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            <div className="mb-2 px-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
               Menu
             </div>
             {user?.role === "ADMIN" ? (
@@ -115,31 +114,21 @@ function AuthenticatedLayout({ title, subtitle, children }) {
 
           {user?.role === "TECHNICIAN" && (
             <div className="mt-8 space-y-1">
-              <div className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              <div className="mb-2 px-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
                 Service Desk
               </div>
-              <NavItem to="/admin/tickets" label="Ticket Command" icon={HiOutlineWrenchScrewdriver} />
+              <NavItem to="/admin/tickets" label="Ticket Command" icon={HiOutlineWrenchScrewdriver} end={true} />
             </div>
           )}
         </div>
 
         <div className="border-t border-slate-200 p-4">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="h-10 w-10 flex-shrink-0 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-medium">
-              {user?.name?.charAt(0) || "U"}
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="truncate text-sm font-medium text-slate-900">
-                {user?.name || "User"}
-              </span>
-              <span className="truncate text-xs text-slate-500">
-                {user?.role || "USER"}
-              </span>
-            </div>
+          <div className="mb-3">
+            <NavItem to="/profile" label="Profile" icon={HiOutlineUser} end={true} />
           </div>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
           >
             <HiArrowRightOnRectangle className="h-4 w-4" />
             Logout
@@ -148,10 +137,10 @@ function AuthenticatedLayout({ title, subtitle, children }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-4 shadow-sm sm:px-6 lg:px-8">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-slate-200/90 bg-white/85 px-4 shadow-sm backdrop-blur-sm sm:px-6 lg:px-8">
           <button
-            className="text-slate-500 hover:text-slate-700 lg:hidden"
+            className="text-slate-500 hover:text-slate-800 lg:hidden"
             onClick={() => setSidebarOpen(true)}
           >
             <HiBars3 className="h-6 w-6" />
@@ -159,15 +148,15 @@ function AuthenticatedLayout({ title, subtitle, children }) {
           
           <div className="flex flex-1 flex-col justify-center">
             <h1 className="text-xl font-semibold text-slate-800">{title}</h1>
-            {subtitle && <p className="text-sm text-slate-500 hidden sm:block">{subtitle}</p>}
+            {subtitle && <p className="hidden text-sm text-slate-500 sm:block">{subtitle}</p>}
           </div>
           
           <div className="flex items-center gap-4 sm:gap-6">
-            <button className="relative text-slate-500 hover:text-cyan-600 transition-colors focus:outline-none">
+            <button className="relative rounded-full border border-slate-200 bg-slate-50 p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none">
               <HiOutlineBell className="h-6 w-6" />
-              <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+              <span className="absolute right-0 top-0 block h-2 w-2 rounded-full bg-slate-500 ring-2 ring-white" />
             </button>
-            <div className="hidden sm:block h-6 w-px bg-slate-200"></div>
+            <div className="hidden h-6 w-px bg-slate-200 sm:block"></div>
             <div className="flex items-center gap-3">
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-medium text-slate-900">
@@ -177,7 +166,7 @@ function AuthenticatedLayout({ title, subtitle, children }) {
                   {user?.role?.toLowerCase() || "User"}
                 </p>
               </div>
-              <button className="h-9 w-9 flex-shrink-0 flex items-center justify-center rounded-full bg-cyan-100 text-cyan-700 font-bold border border-cyan-200 shadow-sm transition hover:bg-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2">
+              <button className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white font-bold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
                 {user?.name?.charAt(0)?.toUpperCase() || "U"}
               </button>
             </div>
