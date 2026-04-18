@@ -108,7 +108,7 @@ function AdminDashboardPage() {
           <div className="panel card-lift fade-up relative overflow-hidden p-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Bookings</p>
-              <span className="chip">
+              <span className="chip chip-warning">
                 {summary.bookingsPending} Pending
               </span>
             </div>
@@ -121,7 +121,7 @@ function AdminDashboardPage() {
           <div className="panel card-lift fade-up stagger-2 relative overflow-hidden p-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Tickets</p>
-              <span className="chip">
+              <span className="chip chip-warning">
                 {summary.ticketsOpen} Open
               </span>
             </div>
@@ -134,7 +134,7 @@ function AdminDashboardPage() {
           <div className="panel card-lift fade-up stagger-3 relative overflow-hidden p-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Resources</p>
-              <span className="chip">
+              <span className="chip chip-success">
                 {summary.resourcesActive} Active
               </span>
             </div>

@@ -6,6 +6,46 @@ import {
   cancelBooking,
 } from "../services/bookingApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
+import {
+  HiOutlineCheckCircle,
+  HiOutlineXCircle,
+  HiOutlineNoSymbol,
+} from "react-icons/hi2";
+
+const getBookingStatusClass = (status) => {
+  const normalized = String(status || "").toUpperCase();
+
+  if (["APPROVED", "CONFIRMED"].includes(normalized)) {
+    return "chip-success";
+  }
+  if (["PENDING", "IN_PROGRESS"].includes(normalized)) {
+    return "chip-warning";
+  }
+  if (["REJECTED", "CANCELLED", "CANCELED"].includes(normalized)) {
+    return "chip-danger";
+  }
+  if (["OPEN", "NEW"].includes(normalized)) {
+    return "chip-info";
+  }
+
+  return "chip-neutral";
+};
+
+const getLockedAction = (status) => {
+  const normalized = String(status || "").toUpperCase();
+
+  if (normalized === "APPROVED") {
+    return "approve";
+  }
+  if (normalized === "REJECTED") {
+    return "reject";
+  }
+  if (["CANCELLED", "CANCELED"].includes(normalized)) {
+    return "cancel";
+  }
+
+  return "";
+};
 
 function AdminBookingsPage() {
   const [bookings, setBookings] = useState([]);
@@ -62,41 +102,97 @@ function AdminBookingsPage() {
       title="Admin Booking Queue"
       subtitle="Approve, reject, and manage campus booking requests"
     >
-      {error && <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+      {error && <p className="status-error mb-4 rounded-xl px-4 py-3 text-sm">{error}</p>}
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="panel overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Resource</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">User</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Date</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Time</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Status</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Reason</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-600">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {bookings.map((booking) => (
+                <tr key={booking.id} className="hover:bg-slate-50/80">
+                  {(() => {
+                    const lockedAction = getLockedAction(booking.status);
+                    const isFinalized = lockedAction !== "";
+
+                    return (
+                      <>
+                  <td className="px-4 py-3 font-semibold text-slate-900">{booking.resourceId}</td>
+                  <td className="px-4 py-3 text-slate-700">{booking.userId}</td>
+                  <td className="px-4 py-3 text-slate-700">{booking.date}</td>
+                  <td className="px-4 py-3 text-slate-700">{booking.startTime} - {booking.endTime}</td>
+                  <td className="px-4 py-3">
+                    <span className={`chip ${getBookingStatusClass(booking.status)}`}>{booking.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{booking.adminReason || "-"}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={isFinalized && lockedAction !== "approve"}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+                          lockedAction === "approve"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-slate-300 bg-white text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
+                        } ${(isFinalized && lockedAction !== "approve") ? "cursor-not-allowed opacity-40" : ""}`}
+                        title="Approve"
+                        aria-label="Approve"
+                        onClick={() => handleApprove(booking.id)}
+                      >
+                        <HiOutlineCheckCircle className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isFinalized && lockedAction !== "reject"}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+                          lockedAction === "reject"
+                            ? "border-rose-200 bg-rose-50 text-rose-700"
+                            : "border-slate-300 bg-white text-slate-600 hover:bg-rose-50 hover:text-rose-700"
+                        } ${(isFinalized && lockedAction !== "reject") ? "cursor-not-allowed opacity-40" : ""}`}
+                        title="Reject"
+                        aria-label="Reject"
+                        onClick={() => handleReject(booking.id)}
+                      >
+                        <HiOutlineXCircle className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isFinalized && lockedAction !== "cancel"}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+                          lockedAction === "cancel"
+                            ? "border-slate-400 bg-slate-200 text-slate-800"
+                            : "border-slate-300 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        } ${(isFinalized && lockedAction !== "cancel") ? "cursor-not-allowed opacity-40" : ""}`}
+                        title="Cancel"
+                        aria-label="Cancel"
+                        onClick={() => handleCancel(booking.id)}
+                      >
+                        <HiOutlineNoSymbol className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </td>
+                      </>
+                    );
+                  })()}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         {bookings.length === 0 && (
-          <div className="panel md:col-span-2 text-sm text-slate-600">No booking requests found.</div>
+          <div className="p-6 text-sm text-slate-600">No booking requests found.</div>
         )}
-
-        {bookings.map((booking) => (
-          <article key={booking.id} className="panel space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">{booking.resourceId}</h3>
-              <span className="chip">{booking.status}</span>
-            </div>
-            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">User:</span> {booking.userId}</p>
-            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Date:</span> {booking.date}</p>
-            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Time:</span> {booking.startTime} - {booking.endTime}</p>
-            {booking.adminReason && (
-              <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <span className="font-medium text-slate-800">Reason:</span> {booking.adminReason}
-              </p>
-            )}
-
-            <div className="flex flex-wrap gap-2 pt-2">
-              <button className="btn-primary" onClick={() => handleApprove(booking.id)}>
-                Approve
-              </button>
-              <button className="btn-secondary" onClick={() => handleReject(booking.id)}>
-                Reject
-              </button>
-              <button className="btn-secondary" onClick={() => handleCancel(booking.id)}>
-                Cancel
-              </button>
-            </div>
-          </article>
-        ))}
       </section>
     </AuthenticatedLayout>
   );

@@ -6,6 +6,25 @@ import {
   getAllResources,
   updateResource,
 } from "../services/resourceApi";
+import {
+  HiOutlinePlus,
+  HiOutlinePencilSquare,
+  HiOutlineTrash,
+  HiOutlineXMark,
+} from "react-icons/hi2";
+
+const getResourceStatusClass = (status) => {
+  const normalized = String(status || "").toUpperCase();
+
+  if (normalized === "ACTIVE") {
+    return "chip-success";
+  }
+  if (["OUT_OF_SERVICE", "INACTIVE", "DISABLED"].includes(normalized)) {
+    return "chip-danger";
+  }
+
+  return "chip-neutral";
+};
 
 const emptyForm = {
   name: "",
@@ -22,6 +41,7 @@ function AdminResourcesPage() {
   const [resources, setResources] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -67,6 +87,7 @@ function AdminResourcesPage() {
       }
       setForm(emptyForm);
       setEditingId("");
+      setDrawerOpen(false);
       setError("");
       await loadResources();
     } catch (err) {
@@ -87,8 +108,21 @@ function AdminResourcesPage() {
       description: resource.description || "",
     });
     setEditingId(resource.id);
+    setDrawerOpen(true);
     setMessage("");
     setError("");
+  };
+
+  const openCreateDrawer = () => {
+    setEditingId("");
+    setForm(emptyForm);
+    setMessage("");
+    setError("");
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
   };
 
   const handleDelete = async (id) => {
@@ -116,119 +150,210 @@ function AdminResourcesPage() {
       title="Admin Resource Management"
       subtitle="Full CRUD control for campus rooms, labs, and equipment"
     >
-      <section className="panel mb-6">
-        <h2 className="mb-4 text-lg font-bold text-slate-900">{submitLabel}</h2>
-        <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <input
-            className="field"
-            placeholder="Resource name"
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            required
-          />
+      <section className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Current Resources</h2>
+          <p className="text-sm text-slate-500">Manage all resources from one clean view.</p>
+        </div>
+        <button type="button" className="btn-primary gap-2" onClick={openCreateDrawer}>
+          <HiOutlinePlus className="h-4 w-4" />
+          Add Resource
+        </button>
+      </section>
 
-          <select
-            className="field"
-            value={form.type}
-            onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
+      {message && <p className="status-success mb-4 rounded-xl px-4 py-3 text-sm">{message}</p>}
+      {error && <p className="status-error mb-4 rounded-xl px-4 py-3 text-sm">{error}</p>}
+
+      <section className="panel overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Name</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Type</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Capacity</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Location</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Availability</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Status</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-600">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {resources.map((resource) => (
+                <tr key={resource.id} className="hover:bg-slate-50/80">
+                  <td className="px-4 py-3 align-top">
+                    <p className="font-semibold text-slate-900">{resource.name}</p>
+                    {resource.description && (
+                      <p className="mt-1 max-w-xs truncate text-xs text-slate-500">{resource.description}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">{resource.type}</td>
+                  <td className="px-4 py-3 text-slate-700">{resource.capacity ?? "N/A"}</td>
+                  <td className="px-4 py-3 text-slate-700">{resource.location || "N/A"}</td>
+                  <td className="px-4 py-3 text-slate-700">
+                    {resource.availabilityStart || "-"} - {resource.availabilityEnd || "-"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`chip ${getResourceStatusClass(resource.status)}`}>{resource.status}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                        title="Edit Resource"
+                        aria-label="Edit Resource"
+                        onClick={() => handleEdit(resource)}
+                      >
+                        <HiOutlinePencilSquare className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-rose-50 hover:text-rose-700"
+                        title="Delete Resource"
+                        aria-label="Delete Resource"
+                        onClick={() => handleDelete(resource.id)}
+                      >
+                        <HiOutlineTrash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {resources.length === 0 && (
+          <div className="p-6 text-sm text-slate-600">No resources found.</div>
+        )}
+      </section>
+
+      <div
+        className={`fixed inset-0 z-[70] bg-slate-950/50 transition-opacity duration-250 ${
+          drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={closeDrawer}
+      />
+      <aside
+        className={`fixed right-0 top-0 z-[80] flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-out ${
+          drawerOpen ? "translate-x-0" : "pointer-events-none translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h2 className="text-lg font-bold text-slate-900">{submitLabel}</h2>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            onClick={closeDrawer}
+            aria-label="Close panel"
           >
-            <option value="LECTURE_HALL">Lecture Hall</option>
-            <option value="LAB">Lab</option>
-            <option value="MEETING_ROOM">Meeting Room</option>
-            <option value="EQUIPMENT">Equipment</option>
-          </select>
+            <HiOutlineXMark className="h-5 w-5" />
+          </button>
+        </div>
 
-          <input
-            className="field"
-            type="number"
-            min="0"
-            placeholder="Capacity"
-            value={form.capacity}
-            onChange={(e) => setForm((prev) => ({ ...prev, capacity: e.target.value }))}
-          />
+        <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto p-5">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Resource Name</label>
+            <input
+              className="field"
+              placeholder="Resource name"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              required
+            />
+          </div>
 
-          <input
-            className="field"
-            placeholder="Location"
-            value={form.location}
-            onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
-          />
-
-          <input
-            className="field"
-            type="time"
-            value={form.availabilityStart}
-            onChange={(e) => setForm((prev) => ({ ...prev, availabilityStart: e.target.value }))}
-          />
-
-          <input
-            className="field"
-            type="time"
-            value={form.availabilityEnd}
-            onChange={(e) => setForm((prev) => ({ ...prev, availabilityEnd: e.target.value }))}
-          />
-
-          <select
-            className="field"
-            value={form.status}
-            onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
-          >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
-          </select>
-
-          <textarea
-            className="field min-h-24 sm:col-span-2 lg:col-span-2"
-            placeholder="Description"
-            value={form.description}
-            onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-          />
-
-          <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
-            <button type="submit" className="btn-primary">{submitLabel}</button>
-            {editingId && (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setEditingId("");
-                  setForm(emptyForm);
-                }}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Type</label>
+              <select
+                className="field"
+                value={form.type}
+                onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
               >
-                Cancel Edit
-              </button>
-            )}
+                <option value="LECTURE_HALL">Lecture Hall</option>
+                <option value="LAB">Lab</option>
+                <option value="MEETING_ROOM">Meeting Room</option>
+                <option value="EQUIPMENT">Equipment</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Capacity</label>
+              <input
+                className="field"
+                type="number"
+                min="0"
+                placeholder="Capacity"
+                value={form.capacity}
+                onChange={(e) => setForm((prev) => ({ ...prev, capacity: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Location</label>
+            <input
+              className="field"
+              placeholder="Location"
+              value={form.location}
+              onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Available From</label>
+              <input
+                className="field"
+                type="time"
+                value={form.availabilityStart}
+                onChange={(e) => setForm((prev) => ({ ...prev, availabilityStart: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Available To</label>
+              <input
+                className="field"
+                type="time"
+                value={form.availabilityEnd}
+                onChange={(e) => setForm((prev) => ({ ...prev, availabilityEnd: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+            <select
+              className="field"
+              value={form.status}
+              onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
+            <textarea
+              className="field min-h-24"
+              placeholder="Description"
+              value={form.description}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <button type="submit" className="btn-primary flex-1">{submitLabel}</button>
+            <button type="button" className="btn-secondary" onClick={closeDrawer}>
+              Cancel
+            </button>
           </div>
         </form>
-      </section>
-
-      {message && <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}
-      {error && <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {resources.length === 0 && (
-          <div className="panel col-span-full text-sm text-slate-600">No resources found.</div>
-        )}
-        {resources.map((resource) => (
-          <article key={resource.id} className="panel">
-            <div className="mb-3 flex items-start justify-between">
-              <h3 className="text-lg font-bold text-slate-900">{resource.name}</h3>
-              <span className="chip">{resource.status}</span>
-            </div>
-            <div className="space-y-1 text-sm text-slate-600">
-              <p><span className="font-semibold text-slate-700">Type:</span> {resource.type}</p>
-              <p><span className="font-semibold text-slate-700">Capacity:</span> {resource.capacity ?? "N/A"}</p>
-              <p><span className="font-semibold text-slate-700">Location:</span> {resource.location || "N/A"}</p>
-              <p><span className="font-semibold text-slate-700">Availability:</span> {resource.availabilityStart || "-"} to {resource.availabilityEnd || "-"}</p>
-            </div>
-
-            <div className="mt-4 flex gap-2">
-              <button className="btn-secondary" onClick={() => handleEdit(resource)}>Edit</button>
-              <button className="btn-secondary" onClick={() => handleDelete(resource.id)}>Delete</button>
-            </div>
-          </article>
-        ))}
-      </section>
+      </aside>
     </AuthenticatedLayout>
   );
 }
