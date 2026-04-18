@@ -9,6 +9,22 @@ import {
 } from "../services/ticketApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 
+const getTicketStatusClass = (status) => {
+  const normalized = String(status || "").toUpperCase();
+
+  if (["RESOLVED", "CLOSED"].includes(normalized)) {
+    return "chip-success";
+  }
+  if (["OPEN", "IN_PROGRESS", "PENDING"].includes(normalized)) {
+    return "chip-warning";
+  }
+  if (["REJECTED", "CANCELLED", "CANCELED"].includes(normalized)) {
+    return "chip-danger";
+  }
+
+  return "chip-neutral";
+};
+
 function TicketDetailsPage() {
   const { id } = useParams();
   const [ticket, setTicket] = useState(null);
@@ -75,7 +91,7 @@ function TicketDetailsPage() {
         <section className="panel mb-6 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-slate-900">Ticket #{ticket.id}</h2>
-            <span className="chip">{ticket.status}</span>
+            <span className={`chip ${getTicketStatusClass(ticket.status)}`}>{ticket.status}</span>
           </div>
           <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Priority:</span> {ticket.priority}</p>
           <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Description:</span> {ticket.description}</p>

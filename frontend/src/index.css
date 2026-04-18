@@ -112,11 +112,41 @@
   }
 
   .chip {
-    border: 1px solid #bfdbfe;
+    border: 1px solid #cbd5e1;
     border-radius: var(--ui-radius);
-    background: var(--ui-accent-soft);
-    color: #1e3a8a;
+    background: #f1f5f9;
+    color: #334155;
     @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold uppercase tracking-wide;
+  }
+
+  .chip-success {
+    border-color: #bbf7d0;
+    background: #ecfdf5;
+    color: #065f46;
+  }
+
+  .chip-warning {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+  }
+
+  .chip-danger {
+    border-color: #fecdd3;
+    background: #fff1f2;
+    color: #9f1239;
+  }
+
+  .chip-info {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1e3a8a;
+  }
+
+  .chip-neutral {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+    color: #334155;
   }
 
   .dashboard-hero {

@@ -2,6 +2,27 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import { getAllTickets, updateTicketStatus } from "../services/ticketApi";
+import {
+  HiOutlinePencilSquare,
+  HiOutlineEye,
+  HiOutlineXMark,
+} from "react-icons/hi2";
+
+const getTicketStatusClass = (status) => {
+  const normalized = String(status || "").toUpperCase();
+
+  if (["RESOLVED", "CLOSED"].includes(normalized)) {
+    return "chip-success";
+  }
+  if (["OPEN", "IN_PROGRESS", "PENDING"].includes(normalized)) {
+    return "chip-warning";
+  }
+  if (["REJECTED", "CANCELLED", "CANCELED"].includes(normalized)) {
+    return "chip-danger";
+  }
+
+  return "chip-neutral";
+};
 
 function AdminTicketsPage() {
   const [tickets, setTickets] = useState([]);
@@ -9,6 +30,8 @@ function AdminTicketsPage() {
   const [message, setMessage] = useState("");
   const [drafts, setDrafts] = useState({});
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeTicketId, setActiveTicketId] = useState("");
 
   const loadTickets = useCallback(async () => {
     try {
@@ -62,27 +85,42 @@ function AdminTicketsPage() {
     }));
   };
 
-  const handleUpdate = async (ticketId) => {
-    const draft = drafts[ticketId];
+  const openEditor = (ticketId) => {
+    setActiveTicketId(ticketId);
+    setDrawerOpen(true);
+  };
+
+  const closeEditor = () => {
+    setDrawerOpen(false);
+  };
+
+  const handleUpdate = async () => {
+    const draft = drafts[activeTicketId];
     if (!draft?.status) {
       setError("Select a status before updating.");
       return;
     }
 
     try {
-      await updateTicketStatus(ticketId, {
+      await updateTicketStatus(activeTicketId, {
         status: draft.status,
         assignedTo: draft.assignedTo || undefined,
         resolutionNotes: draft.resolutionNotes || undefined,
       });
-      setMessage(`Ticket ${ticketId} updated.`);
+      setMessage(`Ticket ${activeTicketId} updated.`);
       setError("");
+      setDrawerOpen(false);
       await loadTickets();
     } catch (err) {
       setMessage("");
       setError(err?.response?.data?.error || "Failed to update ticket.");
     }
   };
+
+  const activeTicket = useMemo(
+    () => tickets.find((ticket) => ticket.id === activeTicketId),
+    [tickets, activeTicketId]
+  );
 
   return (
     <AuthenticatedLayout
@@ -101,63 +139,138 @@ function AdminTicketsPage() {
         </select>
       </section>
 
-      {message && <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}
-      {error && <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+      {message && <p className="status-success mb-4 rounded-xl px-4 py-3 text-sm">{message}</p>}
+      {error && <p className="status-error mb-4 rounded-xl px-4 py-3 text-sm">{error}</p>}
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="panel overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Ticket</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Reporter</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Priority</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Category</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Status</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Assigned</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-600">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {filteredTickets.map((ticket) => (
+                <tr key={ticket.id} className="hover:bg-slate-50/80">
+                  <td className="px-4 py-3 align-top">
+                    <p className="font-semibold text-slate-900">#{ticket.id}</p>
+                    <p className="mt-1 max-w-xs truncate text-xs text-slate-500">{ticket.description}</p>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">{ticket.reportedBy || "Unknown"}</td>
+                  <td className="px-4 py-3 text-slate-700">{ticket.priority || "N/A"}</td>
+                  <td className="px-4 py-3 text-slate-700">{ticket.category || "N/A"}</td>
+                  <td className="px-4 py-3">
+                    <span className={`chip ${getTicketStatusClass(ticket.status)}`}>{ticket.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">{ticket.assignedTo || "-"}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                        title="Manage ticket"
+                        aria-label="Manage ticket"
+                        onClick={() => openEditor(ticket.id)}
+                      >
+                        <HiOutlinePencilSquare className="h-4 w-4" />
+                      </button>
+                      <Link
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                        title="Open ticket thread"
+                        aria-label="Open ticket thread"
+                        to={`/tickets/${ticket.id}`}
+                      >
+                        <HiOutlineEye className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         {filteredTickets.length === 0 && (
-          <div className="panel xl:col-span-2 text-sm text-slate-600">No tickets found for this filter.</div>
+          <div className="p-6 text-sm text-slate-600">No tickets found for this filter.</div>
         )}
 
-        {filteredTickets.map((ticket) => (
-          <article key={ticket.id} className="panel space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Ticket #{ticket.id}</h3>
-                <p className="text-sm text-slate-600">Reported by: {ticket.reportedBy || "Unknown"}</p>
-              </div>
-              <span className="chip">{ticket.status}</span>
-            </div>
-
-            <p className="text-sm text-slate-700"><span className="font-semibold text-slate-900">Priority:</span> {ticket.priority}</p>
-            <p className="text-sm text-slate-700"><span className="font-semibold text-slate-900">Category:</span> {ticket.category || "N/A"}</p>
-            <p className="text-sm text-slate-600">{ticket.description}</p>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              <select
-                className="field"
-                value={drafts[ticket.id]?.status || ticket.status || "OPEN"}
-                onChange={(e) => setDraft(ticket.id, "status", e.target.value)}
-              >
-                <option value="OPEN">OPEN</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="RESOLVED">RESOLVED</option>
-                <option value="CLOSED">CLOSED</option>
-                <option value="REJECTED">REJECTED</option>
-              </select>
-
-              <input
-                className="field"
-                placeholder="Assigned to"
-                value={drafts[ticket.id]?.assignedTo || ""}
-                onChange={(e) => setDraft(ticket.id, "assignedTo", e.target.value)}
-              />
-
-              <textarea
-                className="field min-h-24 sm:col-span-2"
-                placeholder="Resolution notes"
-                value={drafts[ticket.id]?.resolutionNotes || ""}
-                onChange={(e) => setDraft(ticket.id, "resolutionNotes", e.target.value)}
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button className="btn-primary" onClick={() => handleUpdate(ticket.id)}>Update Status</button>
-              <Link className="btn-secondary" to={`/tickets/${ticket.id}`}>Open Ticket Thread</Link>
-            </div>
-          </article>
-        ))}
       </section>
+
+      <div
+        className={`fixed inset-0 z-[70] bg-slate-950/50 transition-opacity duration-250 ${
+          drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={closeEditor}
+      />
+      <aside
+        className={`fixed right-0 top-0 z-[80] flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl transition-transform duration-300 ease-out ${
+          drawerOpen ? "translate-x-0" : "pointer-events-none translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Manage Ticket</h2>
+            <p className="text-sm text-slate-500">#{activeTicket?.id || "-"}</p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            onClick={closeEditor}
+            aria-label="Close panel"
+          >
+            <HiOutlineXMark className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+            <select
+              className="field"
+              value={drafts[activeTicketId]?.status || activeTicket?.status || "OPEN"}
+              onChange={(e) => setDraft(activeTicketId, "status", e.target.value)}
+            >
+              <option value="OPEN">OPEN</option>
+              <option value="IN_PROGRESS">IN_PROGRESS</option>
+              <option value="RESOLVED">RESOLVED</option>
+              <option value="CLOSED">CLOSED</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Assigned To</label>
+            <input
+              className="field"
+              placeholder="Assigned to"
+              value={drafts[activeTicketId]?.assignedTo || ""}
+              onChange={(e) => setDraft(activeTicketId, "assignedTo", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Resolution Notes</label>
+            <textarea
+              className="field min-h-24"
+              placeholder="Resolution notes"
+              value={drafts[activeTicketId]?.resolutionNotes || ""}
+              onChange={(e) => setDraft(activeTicketId, "resolutionNotes", e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <button className="btn-primary flex-1" onClick={handleUpdate}>Update Ticket</button>
+            <button className="btn-secondary" onClick={closeEditor}>Cancel</button>
+          </div>
+        </div>
+      </aside>
     </AuthenticatedLayout>
   );
 }
