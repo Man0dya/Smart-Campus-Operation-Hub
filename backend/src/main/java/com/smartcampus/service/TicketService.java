@@ -1,7 +1,9 @@
 package com.smartcampus.service;
 
+import com.smartcampus.dto.TicketCreateRequest;
 import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.exception.ForbiddenOperationException;
+import com.smartcampus.exception.ConflictException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.model.Attachment;
 import com.smartcampus.model.Ticket;
@@ -10,6 +12,7 @@ import com.smartcampus.repository.TicketRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -23,17 +26,23 @@ public class TicketService {
         this.notificationService = notificationService;
     }
 
-    public Ticket createTicket(Ticket ticket) {
-        if (ticket.getDescription() == null || ticket.getDescription().isBlank()) {
-            throw new IllegalArgumentException("Ticket description is required.");
-        }
+    public Ticket createTicket(TicketCreateRequest request, String reporterUserId) {
+        Ticket ticket = Ticket.builder()
+                .resourceId(request.resourceId())
+                .reportedBy(reporterUserId)
+                .category(request.category())
+                .description(request.description())
+                .priority(request.priority())
+                .contactDetails(request.contactDetails())
+                .status(TicketStatus.OPEN)
+                .resolutionNotes(null)
+                .build();
 
-        if (ticket.getAttachments() != null && ticket.getAttachments().size() > 3) {
-            throw new IllegalArgumentException("A maximum of 3 attachments is allowed.");
-        }
-
-        ticket.setStatus(TicketStatus.OPEN);
-        ticket.setResolutionNotes(null);
+        String now = Instant.now().toString();
+        ticket.setCreatedAt(now);
+        ticket.setUpdatedAt(now);
+        ticket.setStatusChangedAt(now);
+        ticket.setStatusChangedBy(reporterUserId);
         return ticketRepository.save(ticket);
     }
 
@@ -56,6 +65,19 @@ public class TicketService {
         }
 
         Ticket ticket = getTicketById(id);
+
+        if (ticket.getStatus() == status) {
+            return ticket;
+        }
+
+        if (!isValidTransition(ticket.getStatus(), status)) {
+            throw new ConflictException("Invalid ticket status transition from " + ticket.getStatus() + " to " + status + ".");
+        }
+
+        if (status == TicketStatus.REJECTED && (resolutionNotes == null || resolutionNotes.isBlank())) {
+            throw new IllegalArgumentException("A rejection reason is required when setting status to REJECTED.");
+        }
+
         ticket.setStatus(status);
 
         if (assignedTo != null && !assignedTo.isBlank()) {
@@ -63,8 +85,13 @@ public class TicketService {
         }
 
         if (resolutionNotes != null && !resolutionNotes.isBlank()) {
-            ticket.setResolutionNotes(resolutionNotes);
+            ticket.setResolutionNotes(resolutionNotes.trim());
         }
+
+        String now = Instant.now().toString();
+        ticket.setUpdatedAt(now);
+        ticket.setStatusChangedAt(now);
+        ticket.setStatusChangedBy(actor.getId());
 
         Ticket saved = ticketRepository.save(ticket);
 
@@ -97,6 +124,16 @@ public class TicketService {
 
         existing.addAll(newAttachments);
         ticket.setAttachments(existing);
+        ticket.setUpdatedAt(Instant.now().toString());
         return ticketRepository.save(ticket);
+    }
+
+    private boolean isValidTransition(TicketStatus current, TicketStatus next) {
+        return switch (current) {
+            case OPEN -> next == TicketStatus.IN_PROGRESS || next == TicketStatus.REJECTED;
+            case IN_PROGRESS -> next == TicketStatus.RESOLVED || next == TicketStatus.REJECTED;
+            case RESOLVED -> next == TicketStatus.CLOSED;
+            case CLOSED, REJECTED -> false;
+        };
     }
 }

@@ -1,5 +1,6 @@
 package com.smartcampus.service;
 
+import com.smartcampus.dto.BookingCreateRequest;
 import com.smartcampus.enums.BookingStatus;
 import com.smartcampus.exception.ConflictException;
 import com.smartcampus.exception.ResourceNotFoundException;
@@ -7,6 +8,7 @@ import com.smartcampus.model.Booking;
 import com.smartcampus.repository.BookingRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
@@ -29,14 +31,22 @@ public class BookingService {
         return start1.compareTo(end2) < 0 && end1.compareTo(start2) > 0;
     }
 
-    public Booking createBooking(Booking booking) {
-        if (booking.getResourceId() == null || booking.getDate() == null || booking.getStartTime() == null || booking.getEndTime() == null) {
-            throw new IllegalArgumentException("resourceId, date, startTime and endTime are required.");
-        }
-
-        if (booking.getStartTime().compareTo(booking.getEndTime()) >= 0) {
+    public Booking createBooking(BookingCreateRequest request, String userId) {
+        if (request.startTime().compareTo(request.endTime()) >= 0) {
             throw new IllegalArgumentException("startTime must be before endTime.");
         }
+
+        Booking booking = Booking.builder()
+                .resourceId(request.resourceId())
+                .userId(userId)
+                .date(request.date())
+                .startTime(request.startTime())
+                .endTime(request.endTime())
+                .purpose(request.purpose())
+                .expectedAttendees(request.expectedAttendees())
+                .status(BookingStatus.PENDING)
+                .adminReason(null)
+                .build();
 
         List<Booking> existingBookings = bookingRepository.findByResourceIdAndDate(
                 booking.getResourceId(),
@@ -56,8 +66,11 @@ public class BookingService {
             }
         }
 
-        booking.setStatus(BookingStatus.PENDING);
-        booking.setAdminReason(null);
+        String now = Instant.now().toString();
+        booking.setCreatedAt(now);
+        booking.setUpdatedAt(now);
+        booking.setStatusChangedAt(now);
+        booking.setStatusChangedBy(userId);
         return bookingRepository.save(booking);
     }
 
@@ -74,12 +87,12 @@ public class BookingService {
                 .toList();
     }
 
-    public Booking approveBooking(String bookingId, String adminReason) {
-        return updateStatus(bookingId, BookingStatus.APPROVED, adminReason);
+    public Booking approveBooking(String bookingId, String adminReason, String actorUserId) {
+        return updateStatus(bookingId, BookingStatus.APPROVED, adminReason, actorUserId);
     }
 
-    public Booking rejectBooking(String bookingId, String adminReason) {
-        return updateStatus(bookingId, BookingStatus.REJECTED, adminReason);
+    public Booking rejectBooking(String bookingId, String adminReason, String actorUserId) {
+        return updateStatus(bookingId, BookingStatus.REJECTED, adminReason, actorUserId);
     }
 
     public Booking cancelBooking(String bookingId, String requesterUserId, boolean isAdmin) {
@@ -90,7 +103,14 @@ public class BookingService {
             throw new ConflictException("You can only cancel your own bookings.");
         }
 
+        if (booking.getStatus() != BookingStatus.APPROVED) {
+            throw new ConflictException("Only approved bookings can be cancelled.");
+        }
+
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setUpdatedAt(Instant.now().toString());
+        booking.setStatusChangedAt(Instant.now().toString());
+        booking.setStatusChangedBy(requesterUserId);
         Booking saved = bookingRepository.save(booking);
 
         if (!saved.getUserId().equals(requesterUserId)) {
@@ -105,16 +125,24 @@ public class BookingService {
         return saved;
     }
 
-    private Booking updateStatus(String bookingId, BookingStatus targetStatus, String adminReason) {
+    private Booking updateStatus(String bookingId, BookingStatus targetStatus, String adminReason, String actorUserId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
 
-        if (booking.getStatus() == BookingStatus.CANCELLED) {
-            throw new ConflictException("Cancelled bookings cannot be updated.");
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new ConflictException("Only pending bookings can be approved or rejected.");
+        }
+
+        if (targetStatus == BookingStatus.REJECTED && (adminReason == null || adminReason.isBlank())) {
+            throw new IllegalArgumentException("A rejection reason is required.");
         }
 
         booking.setStatus(targetStatus);
-        booking.setAdminReason(adminReason);
+        booking.setAdminReason(adminReason == null ? null : adminReason.trim());
+        String now = Instant.now().toString();
+        booking.setUpdatedAt(now);
+        booking.setStatusChangedAt(now);
+        booking.setStatusChangedBy(actorUserId);
         Booking saved = bookingRepository.save(booking);
 
         String action = targetStatus == BookingStatus.APPROVED ? "approved" : "rejected";

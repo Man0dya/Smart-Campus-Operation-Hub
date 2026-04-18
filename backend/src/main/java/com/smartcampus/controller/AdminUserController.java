@@ -9,6 +9,7 @@ import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.UserRepository;
 import com.smartcampus.service.CurrentUserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,7 +56,7 @@ public class AdminUserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public User createUser(@RequestBody AdminUserCreateRequest request,
+    public User createUser(@Valid @RequestBody AdminUserCreateRequest request,
                            @AuthenticationPrincipal OAuth2User principal) {
         User actor = currentUserService.requireUser(principal);
         currentUserService.requireAdmin(actor);
@@ -94,7 +95,7 @@ public class AdminUserController {
 
     @PutMapping("/{id}")
     public User updateUser(@PathVariable String id,
-                           @RequestBody AdminUserUpdateRequest request,
+                           @Valid @RequestBody AdminUserUpdateRequest request,
                            @AuthenticationPrincipal OAuth2User principal) {
         User actor = currentUserService.requireUser(principal);
         currentUserService.requireAdmin(actor);
@@ -153,7 +154,7 @@ public class AdminUserController {
 
     @PatchMapping("/{id}/role")
     public User updateRole(@PathVariable String id,
-                           @RequestBody RoleUpdateRequest request,
+                           @Valid @RequestBody RoleUpdateRequest request,
                            @AuthenticationPrincipal OAuth2User principal) {
         User actor = currentUserService.requireUser(principal);
         currentUserService.requireAdmin(actor);

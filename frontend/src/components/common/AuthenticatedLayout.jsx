@@ -58,6 +58,8 @@ const extractTicketId = (notification) => {
   return match?.[1] || "";
 };
 
+const authServerOrigin = import.meta.env.VITE_API_ORIGIN || "http://localhost:8080";
+
 function AuthenticatedLayout({ title, subtitle, children }) {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -114,7 +116,7 @@ function AuthenticatedLayout({ title, subtitle, children }) {
   const recentNotifications = useMemo(() => notifications.slice(0, 5), [notifications]);
 
   const handleLogout = () => {
-    window.location.href = "http://localhost:8080/logout";
+    window.location.href = `${authServerOrigin}/logout`;
   };
 
   const handleMarkRead = async (id) => {

@@ -1,5 +1,6 @@
 package com.smartcampus.service;
 
+import com.smartcampus.dto.BookingCreateRequest;
 import com.smartcampus.enums.BookingStatus;
 import com.smartcampus.exception.ConflictException;
 import com.smartcampus.model.Booking;
@@ -31,19 +32,18 @@ class BookingServiceTest {
     @InjectMocks
     private BookingService bookingService;
 
-    private Booking booking;
+    private BookingCreateRequest request;
 
     @BeforeEach
     void setUp() {
-        booking = Booking.builder()
-                .resourceId("res-1")
-                .userId("user-1")
-                .date("2026-05-10")
-                .startTime("10:00")
-                .endTime("11:00")
-                .purpose("Lecture")
-                .expectedAttendees(50)
-                .build();
+        request = new BookingCreateRequest(
+                "res-1",
+                "2026-05-10",
+                "10:00",
+                "11:00",
+                "Lecture",
+                50
+        );
     }
 
     @Test
@@ -51,9 +51,10 @@ class BookingServiceTest {
         when(bookingRepository.findByResourceIdAndDate("res-1", "2026-05-10")).thenReturn(List.of());
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Booking saved = bookingService.createBooking(booking);
+        Booking saved = bookingService.createBooking(request, "user-1");
 
         assertEquals(BookingStatus.PENDING, saved.getStatus());
+        assertEquals("user-1", saved.getStatusChangedBy());
         verify(bookingRepository).save(any(Booking.class));
     }
 
@@ -70,6 +71,32 @@ class BookingServiceTest {
 
         when(bookingRepository.findByResourceIdAndDate("res-1", "2026-05-10")).thenReturn(List.of(existing));
 
-        assertThrows(ConflictException.class, () -> bookingService.createBooking(booking));
+        assertThrows(ConflictException.class, () -> bookingService.createBooking(request, "user-1"));
+    }
+
+    @Test
+    void rejectBooking_shouldRequireReason() {
+        Booking existing = Booking.builder()
+                .id("b1")
+                .resourceId("res-1")
+                .userId("user-1")
+                .status(BookingStatus.PENDING)
+                .build();
+        when(bookingRepository.findById("b1")).thenReturn(java.util.Optional.of(existing));
+
+        assertThrows(IllegalArgumentException.class, () -> bookingService.rejectBooking("b1", "", "admin-1"));
+    }
+
+    @Test
+    void approveBooking_shouldRejectInvalidCurrentState() {
+        Booking existing = Booking.builder()
+                .id("b1")
+                .resourceId("res-1")
+                .userId("user-1")
+                .status(BookingStatus.APPROVED)
+                .build();
+        when(bookingRepository.findById("b1")).thenReturn(java.util.Optional.of(existing));
+
+        assertThrows(ConflictException.class, () -> bookingService.approveBooking("b1", "ok", "admin-1"));
     }
 }
