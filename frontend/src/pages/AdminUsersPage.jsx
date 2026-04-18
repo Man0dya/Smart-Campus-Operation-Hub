@@ -14,6 +14,7 @@ import {
   HiOutlineXMark,
 } from "react-icons/hi2";
 import AuthContext from "../context/auth-context";
+import PaginationControls from "../components/common/PaginationControls";
 
 const emptyForm = {
   name: "",
@@ -39,11 +40,14 @@ function AdminUsersPage() {
   const { user: currentUser } = useContext(AuthContext);
   const [users, setUsers] = useState([]);
   const [filter, setFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadUsers = useCallback(async () => {
     try {
@@ -63,17 +67,36 @@ function AdminUsersPage() {
   }, [loadUsers]);
 
   const filteredUsers = useMemo(() => {
-    if (!filter.trim()) {
-      return users;
-    }
-
     const keyword = filter.trim().toLowerCase();
+
     return users.filter((item) => {
+      const matchesRole = roleFilter === "ALL" || item.role === roleFilter;
+
+      if (!keyword) {
+        return matchesRole;
+      }
+
       const name = (item.name || "").toLowerCase();
       const email = (item.email || "").toLowerCase();
-      return name.includes(keyword) || email.includes(keyword);
+      return matchesRole && (name.includes(keyword) || email.includes(keyword));
     });
-  }, [users, filter]);
+  }, [users, filter, roleFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, roleFilter, pageSize]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [filteredUsers.length, page, pageSize]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, page, pageSize]);
 
   const openCreateDrawer = () => {
     setEditingId("");
@@ -161,12 +184,20 @@ function AdminUsersPage() {
     >
       <section className="panel mb-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <input
-            className="field max-w-md"
-            placeholder="Search users by name or email"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
+          <div className="flex min-w-72 flex-1 flex-wrap items-center gap-2">
+            <input
+              className="field max-w-md flex-1"
+              placeholder="Search users by name or email"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+            <select className="field w-44" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <option value="ALL">All Roles</option>
+              <option value="USER">USER</option>
+              <option value="TECHNICIAN">TECHNICIAN</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+          </div>
           <div className="flex items-center gap-2">
             <button className="btn-secondary gap-2" onClick={() => void loadUsers()}>
               <HiOutlineArrowPath className="h-4 w-4" />
@@ -203,7 +234,7 @@ function AdminUsersPage() {
                   </td>
                 </tr>
               )}
-              {filteredUsers.map((user) => (
+              {paginatedUsers.map((user) => (
                 <tr key={user.id} className="align-middle hover:bg-slate-50/80">
                   <td className="px-4 py-3 text-slate-800">{user.name || "-"}</td>
                   <td className="px-4 py-3 text-slate-700">{user.email || "-"}</td>
@@ -243,6 +274,16 @@ function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredUsers.length > 0 && (
+          <PaginationControls
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredUsers.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        )}
       </section>
 
       <div

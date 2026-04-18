@@ -7,6 +7,7 @@ import {
   HiOutlineEye,
   HiOutlineXMark,
 } from "react-icons/hi2";
+import PaginationControls from "../components/common/PaginationControls";
 
 const getTicketStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -30,8 +31,12 @@ function AdminTicketsPage() {
   const [message, setMessage] = useState("");
   const [drafts, setDrafts] = useState({});
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadTickets = useCallback(async () => {
     try {
@@ -65,11 +70,47 @@ function AdminTicketsPage() {
   }, [loadTickets]);
 
   const filteredTickets = useMemo(() => {
-    if (statusFilter === "ALL") {
-      return tickets;
+    const query = searchQuery.trim().toLowerCase();
+
+    return tickets.filter((item) => {
+      const matchesStatus = statusFilter === "ALL" || item.status === statusFilter;
+      const matchesPriority = priorityFilter === "ALL" || item.priority === priorityFilter;
+
+      if (!query) {
+        return matchesStatus && matchesPriority;
+      }
+
+      const haystack = [
+        item.id,
+        item.description,
+        item.reportedBy,
+        item.assignedTo,
+        item.category,
+        item.priority,
+        item.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return matchesStatus && matchesPriority && haystack.includes(query);
+    });
+  }, [tickets, statusFilter, priorityFilter, searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, priorityFilter, searchQuery, pageSize]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
+    if (page > maxPage) {
+      setPage(maxPage);
     }
-    return tickets.filter((item) => item.status === statusFilter);
-  }, [tickets, statusFilter]);
+  }, [filteredTickets.length, page, pageSize]);
+
+  const paginatedTickets = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredTickets.slice(start, start + pageSize);
+  }, [filteredTickets, page, pageSize]);
 
   const setDraft = (ticketId, key, value) => {
     setDrafts((prev) => ({
@@ -128,6 +169,12 @@ function AdminTicketsPage() {
       subtitle="Monitor all incident tickets and control lifecycle status"
     >
       <section className="mb-5 panel flex flex-wrap items-center gap-3">
+        <input
+          className="field min-w-64 flex-1"
+          placeholder="Search by id, description, reporter, assignee"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
         <label className="text-sm font-medium text-slate-700">Filter by status</label>
         <select className="field w-56" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="ALL">ALL</option>
@@ -136,6 +183,14 @@ function AdminTicketsPage() {
           <option value="RESOLVED">RESOLVED</option>
           <option value="CLOSED">CLOSED</option>
           <option value="REJECTED">REJECTED</option>
+        </select>
+        <label className="text-sm font-medium text-slate-700">Priority</label>
+        <select className="field w-48" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+          <option value="ALL">ALL</option>
+          <option value="LOW">LOW</option>
+          <option value="MEDIUM">MEDIUM</option>
+          <option value="HIGH">HIGH</option>
+          <option value="CRITICAL">CRITICAL</option>
         </select>
       </section>
 
@@ -157,7 +212,7 @@ function AdminTicketsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {filteredTickets.map((ticket) => (
+              {paginatedTickets.map((ticket) => (
                 <tr key={ticket.id} className="hover:bg-slate-50/80">
                   <td className="px-4 py-3 align-top">
                     <p className="font-semibold text-slate-900">#{ticket.id}</p>
@@ -199,6 +254,16 @@ function AdminTicketsPage() {
 
         {filteredTickets.length === 0 && (
           <div className="p-6 text-sm text-slate-600">No tickets found for this filter.</div>
+        )}
+
+        {filteredTickets.length > 0 && (
+          <PaginationControls
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredTickets.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         )}
 
       </section>
