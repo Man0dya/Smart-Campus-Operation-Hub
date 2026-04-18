@@ -37,4 +37,10 @@ public class NotificationController {
         User user = currentUserService.requireUser(principal);
         return notificationService.markAsRead(id, user.getId());
     }
+
+    @PatchMapping("/read-all")
+    public List<Notification> markAllAsRead(@AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        return notificationService.markAllAsRead(user.getId());
+    }
 }

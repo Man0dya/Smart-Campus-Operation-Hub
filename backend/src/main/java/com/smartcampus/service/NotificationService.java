@@ -6,6 +6,7 @@ import com.smartcampus.repository.NotificationRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -44,5 +45,23 @@ public class NotificationService {
 
         notification.setRead(true);
         return notificationRepository.save(notification);
+    }
+
+    public List<Notification> markAllAsRead(String userId) {
+        List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        List<Notification> unread = new ArrayList<>();
+
+        for (Notification notification : notifications) {
+            if (!notification.isRead()) {
+                notification.setRead(true);
+                unread.add(notification);
+            }
+        }
+
+        if (!unread.isEmpty()) {
+            notificationRepository.saveAll(unread);
+        }
+
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 }

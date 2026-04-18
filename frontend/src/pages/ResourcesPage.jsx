@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
+import PaginationControls from "../components/common/PaginationControls";
 
 function ResourcesPage() {
   const [resources, setResources] = useState([]);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
   const [filters, setFilters] = useState({
     type: "",
     minCapacity: "",
@@ -35,12 +39,56 @@ function ResourcesPage() {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
+  const filteredResources = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return resources;
+    }
+
+    return resources.filter((resource) => {
+      const haystack = [
+        resource.name,
+        resource.type,
+        resource.location,
+        resource.description,
+        resource.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [resources, searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, searchQuery, pageSize]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredResources.length / pageSize));
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [filteredResources.length, page, pageSize]);
+
+  const paginatedResources = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredResources.slice(start, start + pageSize);
+  }, [filteredResources, page, pageSize]);
+
   return (
     <AuthenticatedLayout
       title="Facilities & Assets Catalogue"
       subtitle="Find and filter bookable rooms, labs, and equipment"
     >
-      <section className="panel mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="panel mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <input
+          className="field"
+          name="search"
+          placeholder="Search name, type, location"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
         <select className="field" name="type" value={filters.type} onChange={handleFilterChange}>
           <option value="">All Types</option>
           <option value="LECTURE_HALL">Lecture Hall</option>
@@ -83,10 +131,10 @@ function ResourcesPage() {
       {error && <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {resources.length === 0 && (
+        {filteredResources.length === 0 && (
           <div className="panel col-span-full text-sm text-slate-600">No resources match your filters.</div>
         )}
-        {resources.map((resource) => (
+        {paginatedResources.map((resource) => (
           <article key={resource.id} className="panel transition hover:shadow-md">
             <div className="mb-3 flex items-start justify-between gap-3">
               <h3 className="text-lg font-bold text-slate-900">{resource.name}</h3>
@@ -110,6 +158,19 @@ function ResourcesPage() {
           </article>
         ))}
       </section>
+
+      {filteredResources.length > 0 && (
+        <section className="panel mt-4 p-0">
+          <PaginationControls
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredResources.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[9, 18, 27]}
+          />
+        </section>
+      )}
     </AuthenticatedLayout>
   );
 }

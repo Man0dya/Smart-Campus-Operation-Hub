@@ -12,6 +12,7 @@ import {
   HiOutlineTrash,
   HiOutlineXMark,
 } from "react-icons/hi2";
+import PaginationControls from "../components/common/PaginationControls";
 
 const getResourceStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -44,6 +45,11 @@ function AdminResourcesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadResources = useCallback(async () => {
     try {
@@ -145,6 +151,47 @@ function AdminResourcesPage() {
     }
   };
 
+  const filteredResources = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return resources.filter((resource) => {
+      const matchesType = typeFilter === "ALL" || resource.type === typeFilter;
+      const matchesStatus = statusFilter === "ALL" || resource.status === statusFilter;
+
+      if (!query) {
+        return matchesType && matchesStatus;
+      }
+
+      const haystack = [
+        resource.name,
+        resource.type,
+        resource.location,
+        resource.description,
+        resource.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return matchesType && matchesStatus && haystack.includes(query);
+    });
+  }, [resources, searchQuery, typeFilter, statusFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, typeFilter, statusFilter, pageSize]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredResources.length / pageSize));
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [filteredResources.length, page, pageSize]);
+
+  const paginatedResources = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredResources.slice(start, start + pageSize);
+  }, [filteredResources, page, pageSize]);
+
   return (
     <AuthenticatedLayout
       title="Admin Resource Management"
@@ -164,6 +211,31 @@ function AdminResourcesPage() {
       {message && <p className="status-success mb-4 rounded-xl px-4 py-3 text-sm">{message}</p>}
       {error && <p className="status-error mb-4 rounded-xl px-4 py-3 text-sm">{error}</p>}
 
+      <section className="panel mb-5 flex flex-wrap items-center gap-3">
+        <input
+          className="field min-w-64 flex-1"
+          placeholder="Search by name, type, location"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+        />
+        <select className="field w-48" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+          <option value="ALL">All Types</option>
+          <option value="LECTURE_HALL">Lecture Hall</option>
+          <option value="LAB">Lab</option>
+          <option value="MEETING_ROOM">Meeting Room</option>
+          <option value="EQUIPMENT">Equipment</option>
+        </select>
+        <select
+          className="field w-48"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          <option value="ALL">All Status</option>
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
+        </select>
+      </section>
+
       <section className="panel overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -179,7 +251,7 @@ function AdminResourcesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {resources.map((resource) => (
+              {paginatedResources.map((resource) => (
                 <tr key={resource.id} className="hover:bg-slate-50/80">
                   <td className="px-4 py-3 align-top">
                     <p className="font-semibold text-slate-900">{resource.name}</p>
@@ -224,8 +296,18 @@ function AdminResourcesPage() {
           </table>
         </div>
 
-        {resources.length === 0 && (
-          <div className="p-6 text-sm text-slate-600">No resources found.</div>
+        {filteredResources.length === 0 && (
+          <div className="p-6 text-sm text-slate-600">No resources found for these filters.</div>
+        )}
+
+        {filteredResources.length > 0 && (
+          <PaginationControls
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredResources.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         )}
       </section>
 

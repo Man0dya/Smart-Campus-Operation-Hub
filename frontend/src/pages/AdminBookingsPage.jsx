@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   approveBooking,
   getAllBookings,
@@ -11,6 +11,7 @@ import {
   HiOutlineXCircle,
   HiOutlineNoSymbol,
 } from "react-icons/hi2";
+import PaginationControls from "../components/common/PaginationControls";
 
 const getBookingStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -50,6 +51,10 @@ const getLockedAction = (status) => {
 function AdminBookingsPage() {
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadBookings = useCallback(async () => {
     try {
@@ -97,12 +102,75 @@ function AdminBookingsPage() {
     }
   };
 
+  const filteredBookings = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return bookings.filter((booking) => {
+      const matchesStatus =
+        statusFilter === "ALL" || String(booking.status || "").toUpperCase() === statusFilter;
+
+      if (!query) {
+        return matchesStatus;
+      }
+
+      const haystack = [
+        booking.resourceId,
+        booking.userId,
+        booking.date,
+        booking.startTime,
+        booking.endTime,
+        booking.status,
+        booking.adminReason,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return matchesStatus && haystack.includes(query);
+    });
+  }, [bookings, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, pageSize]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [filteredBookings.length, page, pageSize]);
+
+  const paginatedBookings = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, page, pageSize]);
+
   return (
     <AuthenticatedLayout
       title="Admin Booking Queue"
       subtitle="Approve, reject, and manage campus booking requests"
     >
       {error && <p className="status-error mb-4 rounded-xl px-4 py-3 text-sm">{error}</p>}
+
+      <section className="panel mb-5 flex flex-wrap items-center gap-3">
+        <input
+          className="field min-w-64 flex-1"
+          placeholder="Search by resource, user, date, status"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+        />
+        <select
+          className="field w-52"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          <option value="ALL">All Statuses</option>
+          <option value="PENDING">PENDING</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="REJECTED">REJECTED</option>
+          <option value="CANCELLED">CANCELLED</option>
+        </select>
+      </section>
 
       <section className="panel overflow-hidden p-0">
         <div className="overflow-x-auto">
@@ -119,7 +187,7 @@ function AdminBookingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {bookings.map((booking) => (
+              {paginatedBookings.map((booking) => (
                 <tr key={booking.id} className="hover:bg-slate-50/80">
                   {(() => {
                     const lockedAction = getLockedAction(booking.status);
@@ -190,8 +258,18 @@ function AdminBookingsPage() {
           </table>
         </div>
 
-        {bookings.length === 0 && (
-          <div className="p-6 text-sm text-slate-600">No booking requests found.</div>
+        {filteredBookings.length === 0 && (
+          <div className="p-6 text-sm text-slate-600">No booking requests found for these filters.</div>
+        )}
+
+        {filteredBookings.length > 0 && (
+          <PaginationControls
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredBookings.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         )}
       </section>
     </AuthenticatedLayout>

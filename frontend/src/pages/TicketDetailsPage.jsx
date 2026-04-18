@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   createComment,
@@ -8,6 +8,7 @@ import {
   updateComment,
 } from "../services/ticketApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
+import PaginationControls from "../components/common/PaginationControls";
 
 const getTicketStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -32,6 +33,9 @@ function TicketDetailsPage() {
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState("");
   const [error, setError] = useState("");
+  const [commentFilter, setCommentFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const loadData = useCallback(async () => {
     try {
@@ -80,6 +84,35 @@ function TicketDetailsPage() {
     }
   };
 
+  const filteredComments = useMemo(() => {
+    const query = commentFilter.trim().toLowerCase();
+
+    if (!query) {
+      return comments;
+    }
+
+    return comments.filter((comment) => {
+      const haystack = [comment.message, comment.createdAt].join(" ").toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [comments, commentFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [commentFilter, pageSize]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredComments.length / pageSize));
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [filteredComments.length, page, pageSize]);
+
+  const paginatedComments = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredComments.slice(start, start + pageSize);
+  }, [filteredComments, page, pageSize]);
+
   return (
     <AuthenticatedLayout
       title="Ticket Details"
@@ -121,9 +154,17 @@ function TicketDetailsPage() {
 
       <section className="panel mb-4">
         <h3 className="mb-3 text-lg font-bold text-slate-900">Comments</h3>
+        <div className="mb-3">
+          <input
+            className="field"
+            placeholder="Filter comments"
+            value={commentFilter}
+            onChange={(event) => setCommentFilter(event.target.value)}
+          />
+        </div>
         <div className="grid gap-3">
-          {comments.length === 0 && <p className="text-sm text-slate-500">No comments yet.</p>}
-          {comments.map((comment) => (
+          {filteredComments.length === 0 && <p className="text-sm text-slate-500">No comments yet.</p>}
+          {paginatedComments.map((comment) => (
             <article key={comment.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-sm text-slate-700">{comment.message}</p>
               <small className="text-xs text-slate-500">{comment.createdAt}</small>
@@ -144,6 +185,19 @@ function TicketDetailsPage() {
             </article>
           ))}
         </div>
+
+        {filteredComments.length > 0 && (
+          <div className="mt-4 rounded-lg border border-slate-200">
+            <PaginationControls
+              page={page}
+              pageSize={pageSize}
+              totalItems={filteredComments.length}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[5, 10, 20]}
+            />
+          </div>
+        )}
       </section>
 
       <section className="panel max-w-2xl">

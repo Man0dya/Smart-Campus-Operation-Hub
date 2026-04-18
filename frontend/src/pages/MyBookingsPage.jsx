@@ -1,10 +1,31 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cancelBooking, getMyBookings } from "../services/bookingApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
+import PaginationControls from "../components/common/PaginationControls";
+
+const getBookingStatusClass = (status) => {
+  const normalized = String(status || "").toUpperCase();
+
+  if (["APPROVED", "CONFIRMED"].includes(normalized)) {
+    return "chip-success";
+  }
+  if (["PENDING", "IN_PROGRESS"].includes(normalized)) {
+    return "chip-warning";
+  }
+  if (["REJECTED", "CANCELLED", "CANCELED"].includes(normalized)) {
+    return "chip-danger";
+  }
+
+  return "chip-neutral";
+};
 
 function MyBookingsPage() {
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   const loadBookings = useCallback(async () => {
     try {
@@ -32,6 +53,49 @@ function MyBookingsPage() {
     }
   };
 
+  const filteredBookings = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return bookings.filter((booking) => {
+      const matchesStatus =
+        statusFilter === "ALL" || String(booking.status || "").toUpperCase() === statusFilter;
+
+      if (!query) {
+        return matchesStatus;
+      }
+
+      const haystack = [
+        booking.resourceId,
+        booking.date,
+        booking.startTime,
+        booking.endTime,
+        booking.purpose,
+        booking.status,
+        booking.adminReason,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return matchesStatus && haystack.includes(query);
+    });
+  }, [bookings, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, pageSize]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [filteredBookings.length, page, pageSize]);
+
+  const paginatedBookings = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, page, pageSize]);
+
   return (
     <AuthenticatedLayout
       title="My Bookings"
@@ -39,26 +103,36 @@ function MyBookingsPage() {
     >
       {error && <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
 
+      <section className="panel mb-5 flex flex-wrap items-center gap-3">
+        <input
+          className="field min-w-64 flex-1"
+          placeholder="Search by resource, date, purpose"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+        />
+        <select
+          className="field w-52"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          <option value="ALL">All Statuses</option>
+          <option value="PENDING">PENDING</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="REJECTED">REJECTED</option>
+          <option value="CANCELLED">CANCELLED</option>
+        </select>
+      </section>
+
       <section className="grid gap-4 md:grid-cols-2">
-        {bookings.length === 0 && (
+        {filteredBookings.length === 0 && (
           <div className="panel md:col-span-2 text-sm text-slate-600">No bookings found yet.</div>
         )}
 
-        {bookings.map((booking) => (
+        {paginatedBookings.map((booking) => (
           <article key={booking.id} className="panel space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-slate-900">{booking.resourceId}</h3>
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  booking.status === "APPROVED"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : booking.status === "PENDING"
-                    ? "bg-amber-100 text-amber-700"
-                    : booking.status === "REJECTED"
-                    ? "bg-rose-100 text-rose-700"
-                    : "bg-slate-100 text-slate-700"
-                }`}
-              >
+              <span className={`chip ${getBookingStatusClass(booking.status)}`}>
                 {booking.status}
               </span>
             </div>
@@ -82,6 +156,18 @@ function MyBookingsPage() {
           </article>
         ))}
       </section>
+
+      {filteredBookings.length > 0 && (
+        <section className="panel mt-4 p-0">
+          <PaginationControls
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredBookings.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </section>
+      )}
     </AuthenticatedLayout>
   );
 }
