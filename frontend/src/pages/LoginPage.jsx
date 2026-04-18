@@ -103,8 +103,8 @@ function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="grid w-full max-w-6xl gap-8 rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl backdrop-blur md:grid-cols-2 md:p-10">
-        <section className="space-y-5">
+      <div className="grid w-full max-w-6xl gap-8 rounded-3xl border border-slate-300 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur md:grid-cols-2 md:p-10">
+        <section className="space-y-5 fade-up">
           <p className="chip">University Operations Platform</p>
           <h1 className="text-3xl font-extrabold leading-tight text-slate-900 md:text-4xl">
             Smart Campus Operations Hub
@@ -113,17 +113,17 @@ function LoginPage() {
             Manage resource bookings, maintenance tickets, and notifications through role-based workflows.
           </p>
           <div className="grid gap-3 text-sm text-slate-700">
-            <p className="panel">New accounts are created as USER by default</p>
-            <p className="panel">Admin can promote users to TECHNICIAN or ADMIN</p>
-            <p className="panel">Use Google or local email-password authentication</p>
+            <p className="panel border-l-4 border-l-slate-700">New accounts are created as USER by default</p>
+            <p className="panel border-l-4 border-l-slate-700">Admin can promote users to TECHNICIAN or ADMIN</p>
+            <p className="panel border-l-4 border-l-slate-700">Use Google or local email-password authentication</p>
           </div>
         </section>
 
-        <section className="panel flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+        <section className="panel fade-up stagger-1 flex flex-col gap-4 border border-slate-300">
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-100 p-1">
             <button
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                mode === "login" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
+              className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                mode === "login" ? "border-slate-300 bg-white text-slate-900 shadow-sm" : "border-transparent text-slate-600"
               }`}
               onClick={() => {
                 setMode("login");
@@ -135,8 +135,8 @@ function LoginPage() {
               Login
             </button>
             <button
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                mode === "register" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
+              className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                mode === "register" ? "border-slate-300 bg-white text-slate-900 shadow-sm" : "border-transparent text-slate-600"
               }`}
               onClick={() => {
                 setMode("register");
@@ -229,8 +229,8 @@ function LoginPage() {
             Continue with Google
           </button>
 
-          {message && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>}
-          {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+          {message && <p className="status-success rounded-xl px-3 py-2 text-sm">{message}</p>}
+          {error && <p className="status-error rounded-xl px-3 py-2 text-sm">{error}</p>}
         </section>
       </div>
     </div>
