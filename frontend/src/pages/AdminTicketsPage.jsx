@@ -8,6 +8,7 @@ import {
   HiOutlineXMark,
 } from "react-icons/hi2";
 import PaginationControls from "../components/common/PaginationControls";
+import StyledSelect from "../components/common/StyledSelect";
 
 const getTicketStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -176,22 +177,34 @@ function AdminTicketsPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
         <label className="text-sm font-medium text-slate-700">Filter by status</label>
-        <select className="field w-56" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="ALL">ALL</option>
-          <option value="OPEN">OPEN</option>
-          <option value="IN_PROGRESS">IN_PROGRESS</option>
-          <option value="RESOLVED">RESOLVED</option>
-          <option value="CLOSED">CLOSED</option>
-          <option value="REJECTED">REJECTED</option>
-        </select>
+        <StyledSelect
+          name="statusFilter"
+          className="w-56"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          options={[
+            { value: "ALL", label: "ALL" },
+            { value: "OPEN", label: "OPEN" },
+            { value: "IN_PROGRESS", label: "IN_PROGRESS" },
+            { value: "RESOLVED", label: "RESOLVED" },
+            { value: "CLOSED", label: "CLOSED" },
+            { value: "REJECTED", label: "REJECTED" },
+          ]}
+        />
         <label className="text-sm font-medium text-slate-700">Priority</label>
-        <select className="field w-48" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-          <option value="ALL">ALL</option>
-          <option value="LOW">LOW</option>
-          <option value="MEDIUM">MEDIUM</option>
-          <option value="HIGH">HIGH</option>
-          <option value="CRITICAL">CRITICAL</option>
-        </select>
+        <StyledSelect
+          name="priorityFilter"
+          className="w-48"
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+          options={[
+            { value: "ALL", label: "ALL" },
+            { value: "LOW", label: "LOW" },
+            { value: "MEDIUM", label: "MEDIUM" },
+            { value: "HIGH", label: "HIGH" },
+            { value: "CRITICAL", label: "CRITICAL" },
+          ]}
+        />
       </section>
 
       {message && <p className="status-success mb-4 rounded-xl px-4 py-3 text-sm">{message}</p>}
@@ -297,17 +310,18 @@ function AdminTicketsPage() {
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
-            <select
-              className="field"
+            <StyledSelect
+              name="status"
               value={drafts[activeTicketId]?.status || activeTicket?.status || "OPEN"}
               onChange={(e) => setDraft(activeTicketId, "status", e.target.value)}
-            >
-              <option value="OPEN">OPEN</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="RESOLVED">RESOLVED</option>
-              <option value="CLOSED">CLOSED</option>
-              <option value="REJECTED">REJECTED</option>
-            </select>
+              options={[
+                { value: "OPEN", label: "OPEN" },
+                { value: "IN_PROGRESS", label: "IN_PROGRESS" },
+                { value: "RESOLVED", label: "RESOLVED" },
+                { value: "CLOSED", label: "CLOSED" },
+                { value: "REJECTED", label: "REJECTED" },
+              ]}
+            />
           </div>
 
           <div>

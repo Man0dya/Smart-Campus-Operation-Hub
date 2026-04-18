@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createTicket, uploadTicketAttachments } from "../services/ticketApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
+import StyledSelect from "../components/common/StyledSelect";
 
 function CreateTicketPage() {
   const [form, setForm] = useState({
@@ -62,11 +63,17 @@ function CreateTicketPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Priority</label>
-            <select className="field" name="priority" value={form.priority} onChange={handleChange}>
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-            </select>
+            <StyledSelect
+              className="w-full"
+              name="priority"
+              value={form.priority}
+              onChange={handleChange}
+              options={[
+                { value: "LOW", label: "LOW" },
+                { value: "MEDIUM", label: "MEDIUM" },
+                { value: "HIGH", label: "HIGH" },
+              ]}
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Preferred Contact</label>

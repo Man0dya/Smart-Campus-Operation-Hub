@@ -15,6 +15,7 @@ import {
 } from "react-icons/hi2";
 import AuthContext from "../context/auth-context";
 import PaginationControls from "../components/common/PaginationControls";
+import StyledSelect from "../components/common/StyledSelect";
 
 const emptyForm = {
   name: "",
@@ -191,12 +192,18 @@ function AdminUsersPage() {
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
-            <select className="field w-44" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-              <option value="ALL">All Roles</option>
-              <option value="USER">USER</option>
-              <option value="TECHNICIAN">TECHNICIAN</option>
-              <option value="ADMIN">ADMIN</option>
-            </select>
+            <StyledSelect
+              name="roleFilter"
+              className="w-44"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              options={[
+                { value: "ALL", label: "All Roles" },
+                { value: "USER", label: "USER" },
+                { value: "TECHNICIAN", label: "TECHNICIAN" },
+                { value: "ADMIN", label: "ADMIN" },
+              ]}
+            />
           </div>
           <div className="flex items-center gap-2">
             <button className="btn-secondary gap-2" onClick={() => void loadUsers()}>
@@ -335,15 +342,16 @@ function AdminUsersPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Role</label>
-            <select
-              className="field"
+            <StyledSelect
+              name="role"
               value={form.role}
               onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
-            >
-              <option value="USER">USER</option>
-              <option value="TECHNICIAN">TECHNICIAN</option>
-              <option value="ADMIN">ADMIN</option>
-            </select>
+              options={[
+                { value: "USER", label: "USER" },
+                { value: "TECHNICIAN", label: "TECHNICIAN" },
+                { value: "ADMIN", label: "ADMIN" },
+              ]}
+            />
           </div>
 
           <div>

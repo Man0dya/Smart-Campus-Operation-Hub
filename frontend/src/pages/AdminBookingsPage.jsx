@@ -12,6 +12,7 @@ import {
   HiOutlineNoSymbol,
 } from "react-icons/hi2";
 import PaginationControls from "../components/common/PaginationControls";
+import StyledSelect from "../components/common/StyledSelect";
 
 const getBookingStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -159,17 +160,19 @@ function AdminBookingsPage() {
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
         />
-        <select
-          className="field w-52"
+        <StyledSelect
+          name="statusFilter"
+          className="w-52"
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="PENDING">PENDING</option>
-          <option value="APPROVED">APPROVED</option>
-          <option value="REJECTED">REJECTED</option>
-          <option value="CANCELLED">CANCELLED</option>
-        </select>
+          options={[
+            { value: "ALL", label: "All Statuses" },
+            { value: "PENDING", label: "PENDING" },
+            { value: "APPROVED", label: "APPROVED" },
+            { value: "REJECTED", label: "REJECTED" },
+            { value: "CANCELLED", label: "CANCELLED" },
+          ]}
+        />
       </section>
 
       <section className="panel overflow-hidden p-0">

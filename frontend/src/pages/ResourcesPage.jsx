@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import PaginationControls from "../components/common/PaginationControls";
+import StyledSelect from "../components/common/StyledSelect";
 
 function ResourcesPage() {
   const [resources, setResources] = useState([]);
@@ -89,13 +90,19 @@ function ResourcesPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <select className="field" name="type" value={filters.type} onChange={handleFilterChange}>
-          <option value="">All Types</option>
-          <option value="LECTURE_HALL">Lecture Hall</option>
-          <option value="LAB">Lab</option>
-          <option value="MEETING_ROOM">Meeting Room</option>
-          <option value="EQUIPMENT">Equipment</option>
-        </select>
+        <StyledSelect
+          className="w-full"
+          name="type"
+          value={filters.type}
+          onChange={handleFilterChange}
+          options={[
+            { value: "", label: "All Types" },
+            { value: "LECTURE_HALL", label: "Lecture Hall" },
+            { value: "LAB", label: "Lab" },
+            { value: "MEETING_ROOM", label: "Meeting Room" },
+            { value: "EQUIPMENT", label: "Equipment" },
+          ]}
+        />
         <input
           className="field"
           name="minCapacity"
@@ -121,11 +128,17 @@ function ResourcesPage() {
           value={filters.location}
           onChange={handleFilterChange}
         />
-        <select className="field" name="status" value={filters.status} onChange={handleFilterChange}>
-          <option value="">All Status</option>
-          <option value="ACTIVE">Active</option>
-          <option value="OUT_OF_SERVICE">Out of Service</option>
-        </select>
+        <StyledSelect
+          className="w-full"
+          name="status"
+          value={filters.status}
+          onChange={handleFilterChange}
+          options={[
+            { value: "", label: "All Status" },
+            { value: "ACTIVE", label: "Active" },
+            { value: "OUT_OF_SERVICE", label: "Out of Service" },
+          ]}
+        />
       </section>
 
       {error && <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}

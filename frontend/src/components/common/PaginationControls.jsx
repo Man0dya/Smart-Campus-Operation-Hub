@@ -1,3 +1,5 @@
+import StyledSelect from "./StyledSelect";
+
 function PaginationControls({
   page,
   pageSize,
@@ -19,19 +21,19 @@ function PaginationControls({
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-slate-600" htmlFor="page-size-select">Rows</label>
-        <select
+        <span className="text-slate-600">Rows</span>
+        <StyledSelect
           id="page-size-select"
-          className="field w-20"
+          name="pageSize"
+          className="w-20"
           value={pageSize}
           onChange={(event) => onPageSizeChange(Number(event.target.value))}
-        >
-          {pageSizeOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+          menuPlacement="top"
+          options={pageSizeOptions.map((option) => ({
+            value: option,
+            label: String(option),
+          }))}
+        />
 
         <button
           type="button"
