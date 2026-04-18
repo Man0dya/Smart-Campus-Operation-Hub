@@ -27,6 +27,7 @@ Required variables:
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `FRONTEND_URL`
+- `APP_CORS_ALLOWED_ORIGIN_PATTERNS`
 - `APP_UPLOAD_DIR` (optional)
 - `SERVER_PORT` (optional)
 
@@ -98,3 +99,11 @@ npm run build
 	- `frontend/node_modules`
 	- runtime upload dumps
 - Ensure `docs/contribution-matrix.md` and report match actual implementation and commit history.
+
+## Team Clone Troubleshooting (OAuth/Login)
+- If Google login says `invalid_client`, verify backend `.env` has real `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+- Ensure `MONGODB_URI` includes a database path, e.g. `/smartcampusdb`.
+- Keep frontend running on `http://localhost:5173` (Vite is configured with strict port).
+- In Google Cloud OAuth client settings, authorized redirect URI must include:
+	- `http://localhost:8080/login/oauth2/code/google`
+- If using a different frontend URL, update `FRONTEND_URL` in backend `.env` accordingly.
