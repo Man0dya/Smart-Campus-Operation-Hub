@@ -1,5 +1,7 @@
 import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import AuthContext from "../context/auth-context";
 import { loginLocalUser, registerLocalUser } from "../services/authApi";
 
@@ -11,15 +13,71 @@ const initialForm = {
 };
 
 const authServerOrigin = import.meta.env.VITE_API_ORIGIN || "http://localhost:8080";
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validateLoginForm = ({ email, password }) => {
+  const errors = {};
+
+  if (!email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!EMAIL_REGEX.test(email.trim())) {
+    errors.email = "Please enter a valid email address.";
+  }
+
+  if (!password.trim()) {
+    errors.password = "Password is required.";
+  }
+
+  return errors;
+};
+
+const validateRegisterForm = ({ name, email, password, confirmPassword }) => {
+  const errors = {};
+
+  if (!name.trim()) {
+    errors.name = "Full name is required.";
+  } else if (name.trim().length < 2) {
+    errors.name = "Full name must be at least 2 characters.";
+  }
+
+  if (!email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!EMAIL_REGEX.test(email.trim())) {
+    errors.email = "Please enter a valid email address.";
+  }
+
+  if (!password.trim()) {
+    errors.password = "Password is required.";
+  } else if (password.length < 6) {
+    errors.password = "Password must be at least 6 characters.";
+  }
+
+  if (!confirmPassword.trim()) {
+    errors.confirmPassword = "Please confirm your password.";
+  } else if (password !== confirmPassword) {
+    errors.confirmPassword = "Password and confirm password do not match.";
+  }
+
+  return errors;
+};
 
 function LoginPage() {
   const navigate = useNavigate();
   const { setUser, fetchUser } = useContext(AuthContext);
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState(initialForm);
+  const [touched, setTouched] = useState({});
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const loginErrors = validateLoginForm(form);
+  const registerErrors = validateRegisterForm(form);
+  const activeErrors = mode === "login" ? loginErrors : registerErrors;
+  const hasValidationErrors = Object.keys(activeErrors).length > 0;
 
   const routeByRole = (role) => {
     if (role === "ADMIN") return "/admin";
@@ -34,13 +92,29 @@ function LoginPage() {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+
+    if (error) {
+      setError("");
+    }
+  };
+
+  const handleBlur = (event) => {
+    const { name } = event.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
   const handleLocalLogin = async (event) => {
     event.preventDefault();
-    setSubmitting(true);
     setError("");
     setMessage("");
+
+    setTouched((prev) => ({ ...prev, email: true, password: true }));
+    if (Object.keys(loginErrors).length > 0) {
+      setError(Object.values(loginErrors)[0]);
+      return;
+    }
+
+    setSubmitting(true);
 
     try {
       await loginLocalUser({
@@ -65,27 +139,22 @@ function LoginPage() {
 
   const handleRegister = async (event) => {
     event.preventDefault();
-    setSubmitting(true);
     setError("");
     setMessage("");
 
-    if (!form.name.trim()) {
-      setError("Name is required.");
-      setSubmitting(false);
+    setTouched((prev) => ({
+      ...prev,
+      name: true,
+      email: true,
+      password: true,
+      confirmPassword: true,
+    }));
+    if (Object.keys(registerErrors).length > 0) {
+      setError(Object.values(registerErrors)[0]);
       return;
     }
 
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      setSubmitting(false);
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      setError("Password and confirm password do not match.");
-      setSubmitting(false);
-      return;
-    }
+    setSubmitting(true);
 
     try {
       await registerLocalUser({
@@ -95,6 +164,9 @@ function LoginPage() {
       });
       setMessage("Account created. You can now log in as USER.");
       setForm((prev) => ({ ...prev, password: "", confirmPassword: "" }));
+      setTouched({});
+      setShowRegisterPassword(false);
+      setShowConfirmPassword(false);
       setMode("login");
     } catch (err) {
       setError(err?.response?.data?.error || "Registration failed.");
@@ -103,131 +175,222 @@ function LoginPage() {
     }
   };
 
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setTouched({});
+    setError("");
+    setMessage("");
+    setShowLoginPassword(false);
+    setShowRegisterPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  const fieldClass = (fieldName) =>
+    `field ${touched[fieldName] && activeErrors[fieldName] ? "border-rose-400 focus:border-rose-400" : ""}`;
+
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="grid w-full max-w-6xl gap-8 rounded-3xl border border-slate-300 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur md:grid-cols-2 md:p-10">
-        <section className="space-y-5 fade-up">
-          <p className="chip">University Operations Platform</p>
-          <h1 className="text-3xl font-extrabold leading-tight text-slate-900 md:text-4xl">
-            Smart Campus Operations Hub
-          </h1>
-          <p className="text-sm text-slate-600 md:text-base">
-            Manage resource bookings, maintenance tickets, and notifications through role-based workflows.
-          </p>
-          <div className="grid gap-3 text-sm text-slate-700">
-            <p className="panel border-l-4 border-l-slate-700">New accounts are created as USER by default</p>
-            <p className="panel border-l-4 border-l-slate-700">Admin can promote users to TECHNICIAN or ADMIN</p>
-            <p className="panel border-l-4 border-l-slate-700">Use Google or local email-password authentication</p>
+    <div className="min-h-screen w-full bg-slate-100">
+      <div className="grid min-h-screen w-full overflow-hidden bg-white md:grid-cols-[1.15fr_1fr]">
+        <section className="relative border-b border-slate-200 bg-slate-900 p-7 text-slate-100 md:border-b-0 md:border-r md:border-slate-800 md:p-12">
+          <div className="absolute -right-16 top-12 h-52 w-52 rounded-full bg-sky-400/10 blur-2xl" />
+          <div className="absolute -bottom-14 left-10 h-44 w-44 rounded-full bg-indigo-300/10 blur-2xl" />
+
+          <div className="relative space-y-6 fade-up">
+            <p className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-200">
+              Smart Campus Hub
+            </p>
+
+            <div>
+              <h1 className="text-3xl font-bold leading-tight text-white md:text-4xl">
+                Unified campus operations,
+                <br />
+                one secure login.
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-slate-300 md:text-base">
+                Access bookings, maintenance workflows, and notifications with role-aware controls for students,
+                technicians, and administrators.
+              </p>
+            </div>
+
+            <div className="grid gap-3 text-sm text-slate-200">
+              <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2.5">
+                OAuth with Google and secure local account login
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2.5">
+                Role-based destinations: USER, TECHNICIAN, ADMIN
+              </div>
+              <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2.5">
+                Centralized access to resources, bookings, and tickets
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="panel fade-up stagger-1 flex flex-col gap-4 border border-slate-300">
+        <section className="fade-up stagger-1 flex min-h-screen flex-col justify-center gap-5 bg-white p-6 md:p-12">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {mode === "login"
+                ? "Sign in to continue to your operations dashboard"
+                : "Create your account to access Smart Campus Hub"}
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-100 p-1">
             <button
               className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                mode === "login" ? "border-slate-300 bg-white text-slate-900 shadow-sm" : "border-transparent text-slate-600"
+                mode === "login"
+                  ? "border-slate-300 bg-white text-slate-900 shadow-sm"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
-              onClick={() => {
-                setMode("login");
-                setError("");
-                setMessage("");
-              }}
+              onClick={() => switchMode("login")}
               type="button"
             >
-              Login
+              Sign In
             </button>
             <button
               className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                mode === "register" ? "border-slate-300 bg-white text-slate-900 shadow-sm" : "border-transparent text-slate-600"
+                mode === "register"
+                  ? "border-slate-300 bg-white text-slate-900 shadow-sm"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
               }`}
-              onClick={() => {
-                setMode("register");
-                setError("");
-                setMessage("");
-              }}
+              onClick={() => switchMode("register")}
               type="button"
             >
-              Create Account
+              Register
             </button>
           </div>
 
           {mode === "login" ? (
             <form onSubmit={handleLocalLogin} className="grid gap-3">
-              <h2 className="text-xl font-bold text-slate-900">Sign in with Email</h2>
+              <label className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Email</label>
               <input
-                className="field"
+                className={fieldClass("email")}
                 type="email"
                 name="email"
-                placeholder="Email"
+                placeholder="you@example.com"
                 value={form.email}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 required
               />
-              <input
-                className="field"
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
-              <button className="btn-primary" type="submit" disabled={submitting}>
-                {submitting ? "Signing in..." : "Login"}
+              {touched.email && loginErrors.email && <p className="text-xs text-rose-600">{loginErrors.email}</p>}
+              <label className="mt-1 text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Password</label>
+              <div className="relative">
+                <input
+                  className={`${fieldClass("password")} pr-10`}
+                  type={showLoginPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Enter your password"
+                  value={form.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-3 inline-flex items-center text-slate-500 transition hover:text-slate-700"
+                  aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowLoginPassword((prev) => !prev)}
+                >
+                  {showLoginPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
+                </button>
+              </div>
+              {touched.password && loginErrors.password && <p className="text-xs text-rose-600">{loginErrors.password}</p>}
+              <button className="btn-primary mt-2" type="submit" disabled={submitting || hasValidationErrors}>
+                {submitting ? "Signing in..." : "Sign In"}
               </button>
             </form>
           ) : (
             <form onSubmit={handleRegister} className="grid gap-3">
-              <h2 className="text-xl font-bold text-slate-900">Create Local Account</h2>
+              <label className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Full Name</label>
               <input
-                className="field"
+                className={fieldClass("name")}
                 type="text"
                 name="name"
-                placeholder="Full name"
+                placeholder="Your full name"
                 value={form.name}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 required
               />
+              {touched.name && registerErrors.name && <p className="text-xs text-rose-600">{registerErrors.name}</p>}
+              <label className="mt-1 text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Email</label>
               <input
-                className="field"
+                className={fieldClass("email")}
                 type="email"
                 name="email"
-                placeholder="Email"
+                placeholder="you@example.com"
                 value={form.email}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 required
               />
-              <input
-                className="field"
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
-              <input
-                className="field"
-                type="password"
-                name="confirmPassword"
-                placeholder="Confirm password"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-              />
-              <button className="btn-primary" type="submit" disabled={submitting}>
-                {submitting ? "Creating..." : "Create Account"}
+              {touched.email && registerErrors.email && <p className="text-xs text-rose-600">{registerErrors.email}</p>}
+              <label className="mt-1 text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Password</label>
+              <div className="relative">
+                <input
+                  className={`${fieldClass("password")} pr-10`}
+                  type={showRegisterPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Minimum 6 characters"
+                  value={form.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-3 inline-flex items-center text-slate-500 transition hover:text-slate-700"
+                  aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowRegisterPassword((prev) => !prev)}
+                >
+                  {showRegisterPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
+                </button>
+              </div>
+              {touched.password && registerErrors.password && <p className="text-xs text-rose-600">{registerErrors.password}</p>}
+              <label className="mt-1 text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Confirm Password</label>
+              <div className="relative">
+                <input
+                  className={`${fieldClass("confirmPassword")} pr-10`}
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  placeholder="Re-enter password"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-3 inline-flex items-center text-slate-500 transition hover:text-slate-700"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                >
+                  {showConfirmPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
+                </button>
+              </div>
+              {touched.confirmPassword && registerErrors.confirmPassword && (
+                <p className="text-xs text-rose-600">{registerErrors.confirmPassword}</p>
+              )}
+              <button className="btn-primary mt-2" type="submit" disabled={submitting || hasValidationErrors}>
+                {submitting ? "Creating account..." : "Create Account"}
               </button>
             </form>
           )}
 
           <div className="my-1 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
             <span className="h-px flex-1 bg-slate-200" />
-            <span>or</span>
+            <span>or continue with</span>
             <span className="h-px flex-1 bg-slate-200" />
           </div>
 
-          <button className="btn-secondary" onClick={handleGoogleLogin} type="button">
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            onClick={handleGoogleLogin}
+            type="button"
+          >
+            <FcGoogle className="h-5 w-5" />
             Continue with Google
           </button>
 

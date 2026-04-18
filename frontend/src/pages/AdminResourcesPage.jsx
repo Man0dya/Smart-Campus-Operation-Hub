@@ -13,6 +13,7 @@ import {
   HiOutlineXMark,
 } from "react-icons/hi2";
 import PaginationControls from "../components/common/PaginationControls";
+import StyledSelect from "../components/common/StyledSelect";
 
 const getResourceStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -218,22 +219,30 @@ function AdminResourcesPage() {
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
         />
-        <select className="field w-48" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
-          <option value="ALL">All Types</option>
-          <option value="LECTURE_HALL">Lecture Hall</option>
-          <option value="LAB">Lab</option>
-          <option value="MEETING_ROOM">Meeting Room</option>
-          <option value="EQUIPMENT">Equipment</option>
-        </select>
-        <select
-          className="field w-48"
+        <StyledSelect
+          name="typeFilter"
+          className="w-48"
+          value={typeFilter}
+          onChange={(event) => setTypeFilter(event.target.value)}
+          options={[
+            { value: "ALL", label: "All Types" },
+            { value: "LECTURE_HALL", label: "Lecture Hall" },
+            { value: "LAB", label: "Lab" },
+            { value: "MEETING_ROOM", label: "Meeting Room" },
+            { value: "EQUIPMENT", label: "Equipment" },
+          ]}
+        />
+        <StyledSelect
+          name="statusFilter"
+          className="w-48"
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
-        >
-          <option value="ALL">All Status</option>
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
-        </select>
+          options={[
+            { value: "ALL", label: "All Status" },
+            { value: "ACTIVE", label: "ACTIVE" },
+            { value: "OUT_OF_SERVICE", label: "OUT_OF_SERVICE" },
+          ]}
+        />
       </section>
 
       <section className="panel overflow-hidden p-0">
@@ -349,16 +358,17 @@ function AdminResourcesPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Type</label>
-              <select
-                className="field"
+              <StyledSelect
+                name="type"
                 value={form.type}
                 onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
-              >
-                <option value="LECTURE_HALL">Lecture Hall</option>
-                <option value="LAB">Lab</option>
-                <option value="MEETING_ROOM">Meeting Room</option>
-                <option value="EQUIPMENT">Equipment</option>
-              </select>
+                options={[
+                  { value: "LECTURE_HALL", label: "Lecture Hall" },
+                  { value: "LAB", label: "Lab" },
+                  { value: "MEETING_ROOM", label: "Meeting Room" },
+                  { value: "EQUIPMENT", label: "Equipment" },
+                ]}
+              />
             </div>
 
             <div>
@@ -408,14 +418,15 @@ function AdminResourcesPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
-            <select
-              className="field"
+            <StyledSelect
+              name="status"
               value={form.status}
               onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
-            </select>
+              options={[
+                { value: "ACTIVE", label: "ACTIVE" },
+                { value: "OUT_OF_SERVICE", label: "OUT_OF_SERVICE" },
+              ]}
+            />
           </div>
 
           <div>

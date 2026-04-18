@@ -5,6 +5,7 @@ import {
 } from "../services/notificationApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import PaginationControls from "../components/common/PaginationControls";
+import StyledSelect from "../components/common/StyledSelect";
 
 const isNotificationRead = (notification) => {
   if (typeof notification?.read === "boolean") {
@@ -110,11 +111,17 @@ function NotificationsPage() {
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
         />
-        <select className="field w-44" value={readFilter} onChange={(event) => setReadFilter(event.target.value)}>
-          <option value="ALL">All</option>
-          <option value="UNREAD">Unread</option>
-          <option value="READ">Read</option>
-        </select>
+        <StyledSelect
+          name="readFilter"
+          className="w-44"
+          value={readFilter}
+          onChange={(event) => setReadFilter(event.target.value)}
+          options={[
+            { value: "ALL", label: "All" },
+            { value: "UNREAD", label: "Unread" },
+            { value: "READ", label: "Read" },
+          ]}
+        />
       </section>
 
       <section className="grid gap-3">
