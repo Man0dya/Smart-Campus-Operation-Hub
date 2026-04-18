@@ -8,6 +8,7 @@ import com.smartcampus.exception.UnauthorizedException;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.UserRepository;
 import com.smartcampus.service.CurrentUserService;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -52,7 +53,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<User> register(@Valid @RequestBody RegisterRequest request) {
         String name = normalize(request.name());
         String email = normalize(request.email()).toLowerCase();
         String password = request.password();
@@ -80,7 +81,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<User> login(@RequestBody LoginRequest request,
+    public ResponseEntity<User> login(@Valid @RequestBody LoginRequest request,
                                       HttpServletRequest httpRequest,
                                       HttpServletResponse httpResponse) {
         String email = normalize(request.email()).toLowerCase();

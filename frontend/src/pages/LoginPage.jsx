@@ -10,6 +10,8 @@ const initialForm = {
   confirmPassword: "",
 };
 
+const authServerOrigin = import.meta.env.VITE_API_ORIGIN || "http://localhost:8080";
+
 function LoginPage() {
   const navigate = useNavigate();
   const { setUser, fetchUser } = useContext(AuthContext);
@@ -26,7 +28,7 @@ function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
+    window.location.href = `${authServerOrigin}/oauth2/authorization/google`;
   };
 
   const handleChange = (event) => {

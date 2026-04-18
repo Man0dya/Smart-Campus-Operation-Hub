@@ -25,4 +25,8 @@ public class Booking {
     private Integer expectedAttendees;
     private BookingStatus status;
     private String adminReason;
+    private String createdAt;
+    private String updatedAt;
+    private String statusChangedAt;
+    private String statusChangedBy;
 }

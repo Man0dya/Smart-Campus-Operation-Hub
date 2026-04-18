@@ -23,4 +23,5 @@ public class Comment {
     private String userId;
     private String message;
     private String createdAt;
+    private String updatedAt;
 }

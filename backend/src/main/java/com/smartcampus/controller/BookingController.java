@@ -1,10 +1,13 @@
 package com.smartcampus.controller;
 
+import com.smartcampus.dto.BookingCreateRequest;
+import com.smartcampus.dto.BookingDecisionRequest;
 import com.smartcampus.enums.BookingStatus;
 import com.smartcampus.model.Booking;
 import com.smartcampus.model.User;
 import com.smartcampus.service.CurrentUserService;
 import com.smartcampus.service.BookingService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,7 +15,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -44,31 +46,30 @@ public class BookingController {
     }
 
     @PostMapping
-    public ResponseEntity<Booking> createBooking(@RequestBody Booking booking,
+    public ResponseEntity<Booking> createBooking(@Valid @RequestBody BookingCreateRequest request,
                                                  @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
-        booking.setUserId(user.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.createBooking(booking));
+        return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.createBooking(request, user.getId()));
     }
 
     @PatchMapping("/{id}/approve")
     public Booking approveBooking(@PathVariable String id,
-                                  @RequestBody(required = false) Map<String, String> request,
+                                  @RequestBody(required = false) @Valid BookingDecisionRequest request,
                                   @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
         currentUserService.requireAdmin(user);
-        String reason = request == null ? null : request.get("reason");
-        return bookingService.approveBooking(id, reason);
+        String reason = request == null ? null : request.reason();
+        return bookingService.approveBooking(id, reason, user.getId());
     }
 
     @PatchMapping("/{id}/reject")
     public Booking rejectBooking(@PathVariable String id,
-                                 @RequestBody(required = false) Map<String, String> request,
+                                 @RequestBody(required = false) @Valid BookingDecisionRequest request,
                                  @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
         currentUserService.requireAdmin(user);
-        String reason = request == null ? null : request.get("reason");
-        return bookingService.rejectBooking(id, reason);
+        String reason = request == null ? null : request.reason();
+        return bookingService.rejectBooking(id, reason, user.getId());
     }
 
     @PatchMapping("/{id}/cancel")

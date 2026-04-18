@@ -43,6 +43,7 @@ public class CommentService {
                 .userId(userId)
                 .message(message)
                 .createdAt(Instant.now().toString())
+            .updatedAt(Instant.now().toString())
                 .build();
 
         Comment saved = commentRepository.save(comment);
@@ -81,6 +82,7 @@ public class CommentService {
         }
 
         comment.setMessage(message);
+        comment.setUpdatedAt(Instant.now().toString());
         return commentRepository.save(comment);
     }
 

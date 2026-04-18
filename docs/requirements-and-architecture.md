@@ -76,9 +76,16 @@ flowchart TB
 
 ## Testing and Quality Evidence
 - Backend unit test: Booking conflict logic in `BookingServiceTest`.
+- Backend unit test: Ticket workflow transition logic in `TicketServiceTest`.
 - Backend compile and verification through Maven.
 - Frontend production build through Vite.
-- Centralized exception handling with meaningful HTTP codes and payloads.
+- Centralized exception handling with structured payload (`timestamp`, `status`, `error`, `message`, `path`, `details`).
+
+## Additional Submission Artifacts
+- Endpoint inventory: `docs/endpoint-inventory.md`
+- Testing checklist and evidence guide: `docs/testing-evidence.md`
+- Team contribution matrix: `docs/contribution-matrix.md`
+- Report source draft: `docs/IT3030_PAF_Assignment_2026_GroupXX_report.md`
 
 ## CI/CD
 - GitHub Actions workflow runs backend verify and frontend build on push and pull request.

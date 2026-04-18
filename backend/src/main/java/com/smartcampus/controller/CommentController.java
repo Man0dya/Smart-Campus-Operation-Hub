@@ -1,9 +1,12 @@
 package com.smartcampus.controller;
 
+import com.smartcampus.dto.CommentCreateRequest;
+import com.smartcampus.dto.CommentUpdateRequest;
 import com.smartcampus.model.Comment;
 import com.smartcampus.model.User;
 import com.smartcampus.service.CommentService;
 import com.smartcampus.service.CurrentUserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/comments")
@@ -40,21 +42,19 @@ public class CommentController {
     }
 
     @PostMapping
-    public ResponseEntity<Comment> createComment(@RequestBody Map<String, String> request,
+    public ResponseEntity<Comment> createComment(@Valid @RequestBody CommentCreateRequest request,
                                                  @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
-        String ticketId = request.get("ticketId");
-        String message = request.get("message");
-        Comment saved = commentService.createComment(ticketId, user.getId(), message);
+        Comment saved = commentService.createComment(request.ticketId(), user.getId(), request.message());
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PatchMapping("/{id}")
     public Comment updateOwnComment(@PathVariable String id,
-                                    @RequestBody Map<String, String> request,
+                                    @Valid @RequestBody CommentUpdateRequest request,
                                     @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
-        return commentService.updateOwnComment(id, user.getId(), request.get("message"));
+        return commentService.updateOwnComment(id, user.getId(), request.message());
     }
 
     @DeleteMapping("/{id}")

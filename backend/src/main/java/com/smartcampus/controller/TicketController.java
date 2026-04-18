@@ -1,13 +1,15 @@
 package com.smartcampus.controller;
 
+import com.smartcampus.dto.TicketCreateRequest;
+import com.smartcampus.dto.TicketStatusUpdateRequest;
 import com.smartcampus.enums.Role;
-import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.model.Attachment;
 import com.smartcampus.model.Ticket;
 import com.smartcampus.model.User;
 import com.smartcampus.service.CurrentUserService;
 import com.smartcampus.service.TicketAttachmentStorageService;
 import com.smartcampus.service.TicketService;
+import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
@@ -26,7 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -45,11 +46,10 @@ public class TicketController {
     }
 
     @PostMapping
-    public ResponseEntity<Ticket> createTicket(@RequestBody Ticket ticket,
+    public ResponseEntity<Ticket> createTicket(@Valid @RequestBody TicketCreateRequest request,
                                                @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
-        ticket.setReportedBy(user.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(ticket));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(request, user.getId()));
     }
 
     @GetMapping("/my")
@@ -77,21 +77,19 @@ public class TicketController {
 
     @PatchMapping("/{id}/status")
     public Ticket updateTicketStatus(@PathVariable String id,
-                                     @RequestBody Map<String, String> request,
+                                     @Valid @RequestBody TicketStatusUpdateRequest request,
                                      @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
         boolean actorIsAdminOrTech = user.getRole() == Role.ADMIN || user.getRole() == Role.TECHNICIAN;
 
-        String statusValue = request.get("status");
-        if (statusValue == null || statusValue.isBlank()) {
-            throw new IllegalArgumentException("status is required.");
-        }
-
-        TicketStatus status = TicketStatus.valueOf(statusValue.toUpperCase());
-        String assignedTo = request.get("assignedTo");
-        String resolutionNotes = request.get("resolutionNotes");
-
-        return ticketService.updateTicketStatus(id, status, assignedTo, resolutionNotes, user, actorIsAdminOrTech);
+        return ticketService.updateTicketStatus(
+                id,
+                request.status(),
+                request.assignedTo(),
+                request.resolutionNotes(),
+                user,
+                actorIsAdminOrTech
+        );
     }
 
     @PostMapping(path = "/{id}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

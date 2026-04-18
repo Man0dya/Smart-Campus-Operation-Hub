@@ -10,6 +10,8 @@ import {
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import PaginationControls from "../components/common/PaginationControls";
 
+const apiOrigin = import.meta.env.VITE_API_ORIGIN || "http://localhost:8080";
+
 const getTicketStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
 
@@ -135,7 +137,7 @@ function TicketDetailsPage() {
               <ul className="list-inside list-disc space-y-1 text-sm text-cyan-700">
                 {ticket.attachments.map((attachment) => (
                   <li key={attachment.fileName}>
-                    <a href={`http://localhost:8080${attachment.fileUrl}`} target="_blank" rel="noreferrer" className="hover:underline">
+                    <a href={`${apiOrigin}${attachment.fileUrl}`} target="_blank" rel="noreferrer" className="hover:underline">
                       {attachment.fileName}
                     </a>
                   </li>
