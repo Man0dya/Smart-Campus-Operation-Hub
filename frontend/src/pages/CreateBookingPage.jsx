@@ -4,6 +4,7 @@ import { getAllResources } from "../services/resourceApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import FloatingToast from "../components/common/FloatingToast";
 import StyledSelect from "../components/common/StyledSelect";
+import { HiOutlineCalendarDays, HiOutlineClock } from "react-icons/hi2";
 
 const initialForm = {
   resourceId: "",
@@ -111,6 +112,15 @@ function CreateBookingPage() {
       })),
     [filteredResources]
   );
+
+  const selectedResourceName = useMemo(() => {
+    if (!form.resourceId) {
+      return "Not selected";
+    }
+
+    const selectedResource = resources.find((resource) => resource.id === form.resourceId);
+    return selectedResource?.name || "Unknown resource";
+  }, [resources, form.resourceId]);
 
   useEffect(() => {
     if (!form.resourceId) {
@@ -224,6 +234,14 @@ function CreateBookingPage() {
     return options;
   }, [availableSegments, form.startTime]);
 
+  const availabilityWindow = useMemo(() => {
+    if (!availability?.availabilityStart || !availability?.availabilityEnd) {
+      return "Select resource and date";
+    }
+
+    return `${availability.availabilityStart} - ${availability.availabilityEnd}`;
+  }, [availability]);
+
   useEffect(() => {
     if (!form.startTime || endTimeOptions.length === 0) {
       if (form.endTime) {
@@ -289,107 +307,147 @@ function CreateBookingPage() {
       title="Create Booking Request"
       subtitle="Submit purpose, schedule, and attendance details for approval"
     >
-      <section className="panel max-w-3xl">
-        <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Resource Category</label>
-            <StyledSelect
-              name="resourceCategory"
-              value={selectedCategory}
-              onChange={(event) => setSelectedCategory(event.target.value)}
-              options={categoryOptions}
-              disabled={loadingResources}
-            />
+      <div className="mx-auto max-w-5xl space-y-5 fade-up">
+        <section className="panel overflow-hidden p-0">
+          <div className="grid gap-0 sm:grid-cols-3">
+            <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 to-sky-50 px-4 py-3 sm:border-b-0 sm:border-r">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected Resource</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{selectedResourceName}</p>
+            </div>
+            <div className="border-b border-slate-200 bg-white px-4 py-3 sm:border-b-0 sm:border-r">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Availability Window</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{availabilityWindow}</p>
+            </div>
+            <div className="bg-gradient-to-r from-slate-50 to-white px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Start Slots</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{startTimeOptions.length} options</p>
+            </div>
           </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Resource Name</label>
-            <StyledSelect
-              className="w-full"
-              name="resourceId"
-              value={form.resourceId}
-              onChange={handleChange}
-              options={resourceOptions}
-              placeholder={loadingResources ? "Loading resources..." : "Select resource"}
-              searchable
-              searchPlaceholder="Search by resource name"
-              disabled={loadingResources || resourceOptions.length === 0}
-            />
-            {resourceOptions.length === 0 && !loadingResources && (
-              <p className="mt-1 text-xs text-slate-500">No resources available for the selected category.</p>
-            )}
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Date</label>
-            <input
-              className="field"
-              name="date"
-              type="date"
-              value={form.date}
-              onChange={handleChange}
-              min={minBookingDate}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Expected Attendees</label>
-            <input
-              className="field"
-              name="expectedAttendees"
-              type="number"
-              min="1"
-              value={form.expectedAttendees}
-              onChange={handleChange}
-              placeholder="Optional"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Start Time</label>
-            <StyledSelect
-              className="w-full"
-              name="startTime"
-              value={form.startTime}
-              onChange={handleChange}
-              options={startTimeOptions}
-              placeholder={loadingAvailability ? "Loading available times..." : "Select start time"}
-              disabled={!form.resourceId || !form.date || loadingAvailability || startTimeOptions.length === 0}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">End Time</label>
-            <StyledSelect
-              className="w-full"
-              name="endTime"
-              value={form.endTime}
-              onChange={handleChange}
-              options={endTimeOptions}
-              placeholder="Select end time"
-              disabled={!form.startTime || endTimeOptions.length === 0}
-              required
-            />
-            <p className="mt-1 text-xs text-slate-500">Duration must be between 30 minutes and 4 hours.</p>
-            {form.resourceId && form.date && !loadingAvailability && startTimeOptions.length === 0 && (
-              <p className="mt-1 text-xs text-rose-600">No available times for this resource on the selected date.</p>
-            )}
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Purpose</label>
-            <textarea
-              className="field min-h-24"
-              name="purpose"
-              value={form.purpose}
-              onChange={handleChange}
-              placeholder="Describe the purpose of this booking"
-              required
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <button className="btn-primary" type="submit">Submit Booking Request</button>
-          </div>
-        </form>
-      </section>
+        </section>
 
-      {error && <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+        <div>
+          <section className="panel card-lift">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                <HiOutlineCalendarDays className="h-4 w-4" />
+                Resource & Date
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Resource Category</label>
+                  <StyledSelect
+                    name="resourceCategory"
+                    value={selectedCategory}
+                    onChange={(event) => setSelectedCategory(event.target.value)}
+                    options={categoryOptions}
+                    disabled={loadingResources}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Date</label>
+                  <input
+                    className="field"
+                    name="date"
+                    type="date"
+                    value={form.date}
+                    onChange={handleChange}
+                    min={minBookingDate}
+                    required
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Resource Name</label>
+                  <StyledSelect
+                    className="w-full"
+                    name="resourceId"
+                    value={form.resourceId}
+                    onChange={handleChange}
+                    options={resourceOptions}
+                    placeholder={loadingResources ? "Loading resources..." : "Select resource"}
+                    searchable
+                    searchPlaceholder="Search by resource name"
+                    disabled={loadingResources || resourceOptions.length === 0}
+                  />
+                  {resourceOptions.length === 0 && !loadingResources && (
+                    <p className="mt-1 text-xs text-slate-500">No resources available for the selected category.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 border-t border-slate-200 pt-5">
+              <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                <HiOutlineClock className="h-4 w-4" />
+                Time & Details
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Start Time</label>
+                  <StyledSelect
+                    className="w-full"
+                    name="startTime"
+                    value={form.startTime}
+                    onChange={handleChange}
+                    options={startTimeOptions}
+                    placeholder={loadingAvailability ? "Loading available times..." : "Select start time"}
+                    disabled={!form.resourceId || !form.date || loadingAvailability || startTimeOptions.length === 0}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">End Time</label>
+                  <StyledSelect
+                    className="w-full"
+                    name="endTime"
+                    value={form.endTime}
+                    onChange={handleChange}
+                    options={endTimeOptions}
+                    placeholder="Select end time"
+                    disabled={!form.startTime || endTimeOptions.length === 0}
+                    required
+                  />
+                  <p className="mt-1 text-xs text-slate-500">Duration must be between 30 minutes and 4 hours.</p>
+                  {form.resourceId && form.date && !loadingAvailability && startTimeOptions.length === 0 && (
+                    <p className="mt-1 text-xs text-rose-600">No available times for this resource on the selected date.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Expected Attendees</label>
+                  <input
+                    className="field"
+                    name="expectedAttendees"
+                    type="number"
+                    min="1"
+                    value={form.expectedAttendees}
+                    onChange={handleChange}
+                    placeholder="Optional"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Purpose</label>
+                  <textarea
+                    className="field min-h-24"
+                    name="purpose"
+                    value={form.purpose}
+                    onChange={handleChange}
+                    placeholder="Describe the purpose of this booking"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
+              <p className="text-xs text-slate-500">Requests are created with pending status and reviewed by admin.</p>
+              <button className="btn-primary" type="submit">Submit Booking Request</button>
+            </div>
+          </form>
+          </section>
+        </div>
+
+        {error && <p className="status-error rounded-xl px-4 py-3 text-sm">{error}</p>}
+      </div>
 
       <FloatingToast
         open={toast.open}
