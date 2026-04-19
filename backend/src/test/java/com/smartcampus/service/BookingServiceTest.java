@@ -63,10 +63,28 @@ class BookingServiceTest {
         Booking existing = Booking.builder()
                 .id("b1")
                 .resourceId("res-1")
+                .userId("user-2")
                 .date("2026-05-10")
                 .startTime("10:30")
                 .endTime("11:30")
                 .status(BookingStatus.PENDING)
+                .build();
+
+        when(bookingRepository.findByResourceIdAndDate("res-1", "2026-05-10")).thenReturn(List.of(existing));
+
+        assertThrows(ConflictException.class, () -> bookingService.createBooking(request, "user-1"));
+    }
+
+    @Test
+    void createBooking_shouldThrowConflictOnOverlapWithApprovedFromAnotherUser() {
+        Booking existing = Booking.builder()
+                .id("b2")
+                .resourceId("res-1")
+                .userId("user-9")
+                .date("2026-05-10")
+                .startTime("10:20")
+                .endTime("10:50")
+                .status(BookingStatus.APPROVED)
                 .build();
 
         when(bookingRepository.findByResourceIdAndDate("res-1", "2026-05-10")).thenReturn(List.of(existing));
@@ -98,6 +116,35 @@ class BookingServiceTest {
         when(bookingRepository.findById("b1")).thenReturn(java.util.Optional.of(existing));
 
         assertThrows(ConflictException.class, () -> bookingService.approveBooking("b1", "ok", "admin-1"));
+    }
+
+    @Test
+    void approveBooking_shouldThrowConflictWhenOverlapExists() {
+    Booking bookingToApprove = Booking.builder()
+        .id("b1")
+        .resourceId("res-1")
+        .userId("user-1")
+        .date("2026-05-10")
+        .startTime("10:00")
+        .endTime("11:00")
+        .status(BookingStatus.PENDING)
+        .build();
+
+    Booking existingApproved = Booking.builder()
+        .id("b2")
+        .resourceId("res-1")
+        .userId("user-2")
+        .date("2026-05-10")
+        .startTime("10:30")
+        .endTime("11:30")
+        .status(BookingStatus.APPROVED)
+        .build();
+
+    when(bookingRepository.findById("b1")).thenReturn(java.util.Optional.of(bookingToApprove));
+    when(bookingRepository.findByResourceIdAndDate("res-1", "2026-05-10"))
+        .thenReturn(List.of(bookingToApprove, existingApproved));
+
+    assertThrows(ConflictException.class, () -> bookingService.approveBooking("b1", "ok", "admin-1"));
     }
 
     @Test
