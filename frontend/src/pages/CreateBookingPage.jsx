@@ -107,7 +107,7 @@ function CreateBookingPage() {
     () =>
       filteredResources.map((resource) => ({
         value: resource.id,
-        label: `${resource.id} - ${resource.name || "Unnamed"} (${resource.type || "N/A"})`,
+        label: resource.name || "Unnamed Resource",
       })),
     [filteredResources]
   );
@@ -309,9 +309,9 @@ function CreateBookingPage() {
               value={form.resourceId}
               onChange={handleChange}
               options={resourceOptions}
-              placeholder={loadingResources ? "Loading resources..." : "Select resource ID"}
+              placeholder={loadingResources ? "Loading resources..." : "Select resource"}
               searchable
-              searchPlaceholder="Search by resource ID or name"
+              searchPlaceholder="Search by resource name"
               disabled={loadingResources || resourceOptions.length === 0}
             />
             {resourceOptions.length === 0 && !loadingResources && (
