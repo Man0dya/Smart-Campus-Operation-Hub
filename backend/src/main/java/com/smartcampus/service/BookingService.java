@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Service
 public class BookingService {
@@ -31,6 +32,30 @@ public class BookingService {
         return start1.compareTo(end2) < 0 && end1.compareTo(start2) > 0;
     }
 
+    private void ensureNoConflicts(Booking candidate, String ignoreBookingId) {
+        List<Booking> existingBookings = bookingRepository.findByResourceIdAndDate(
+                candidate.getResourceId(),
+                candidate.getDate()
+        );
+
+        for (Booking existing : existingBookings) {
+            if (ignoreBookingId != null && Objects.equals(ignoreBookingId, existing.getId())) {
+                continue;
+            }
+
+            if (existing.getStatus() == BookingStatus.PENDING || existing.getStatus() == BookingStatus.APPROVED) {
+                if (isOverlapping(
+                        candidate.getStartTime(),
+                        candidate.getEndTime(),
+                        existing.getStartTime(),
+                        existing.getEndTime()
+                )) {
+                    throw new ConflictException("Booking conflict detected for this resource and time.");
+                }
+            }
+        }
+    }
+
     public Booking createBooking(BookingCreateRequest request, String userId) {
         if (request.startTime().compareTo(request.endTime()) >= 0) {
             throw new IllegalArgumentException("startTime must be before endTime.");
@@ -48,23 +73,7 @@ public class BookingService {
                 .adminReason(null)
                 .build();
 
-        List<Booking> existingBookings = bookingRepository.findByResourceIdAndDate(
-                booking.getResourceId(),
-                booking.getDate()
-        );
-
-        for (Booking existing : existingBookings) {
-            if (existing.getStatus() == BookingStatus.PENDING || existing.getStatus() == BookingStatus.APPROVED) {
-                if (isOverlapping(
-                        booking.getStartTime(),
-                        booking.getEndTime(),
-                        existing.getStartTime(),
-                        existing.getEndTime()
-                )) {
-                    throw new ConflictException("Booking conflict detected for this resource and time.");
-                }
-            }
-        }
+        ensureNoConflicts(booking, null);
 
         String now = Instant.now().toString();
         booking.setCreatedAt(now);
@@ -151,6 +160,10 @@ public class BookingService {
 
         if (targetStatus == BookingStatus.REJECTED && (adminReason == null || adminReason.isBlank())) {
             throw new IllegalArgumentException("A rejection reason is required.");
+        }
+
+        if (targetStatus == BookingStatus.APPROVED) {
+            ensureNoConflicts(booking, booking.getId());
         }
 
         booking.setStatus(targetStatus);
