@@ -4,15 +4,19 @@ import {
   getAllBookings,
   rejectBooking,
   cancelBooking,
+  deleteAdminBooking,
 } from "../services/bookingApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import {
   HiOutlineCheckCircle,
   HiOutlineXCircle,
   HiOutlineNoSymbol,
+  HiOutlineTrash,
 } from "react-icons/hi2";
 import PaginationControls from "../components/common/PaginationControls";
 import StyledSelect from "../components/common/StyledSelect";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import FloatingToast from "../components/common/FloatingToast";
 
 const getBookingStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -52,10 +56,33 @@ const getLockedAction = (status) => {
 function AdminBookingsPage() {
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    action: "",
+    bookingId: "",
+    title: "",
+    description: "",
+    confirmText: "Confirm",
+    variant: "danger",
+    inputLabel: "",
+    inputPlaceholder: "",
+    inputDefaultValue: "",
+    inputRequired: false,
+    multilineInput: false,
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog((prev) => ({ ...prev, open: false }));
+  };
+
+  const showToast = (message, type = "success") => {
+    setToast({ open: true, message, type });
+  };
 
   const loadBookings = useCallback(async () => {
     try {
@@ -74,33 +101,144 @@ function AdminBookingsPage() {
     return () => clearTimeout(timer);
   }, [loadBookings]);
 
-  const handleApprove = async (id) => {
-    const reason = window.prompt("Optional approval note:", "Approved by admin") || undefined;
+  const approveBookingAction = async (id, reason) => {
     try {
       await approveBooking(id, reason);
+      showToast("Booking approved.");
+      setError("");
       await loadBookings();
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to approve booking.");
     }
   };
 
-  const handleReject = async (id) => {
-    const reason = window.prompt("Reason for rejection:", "") || "Rejected by admin";
+  const rejectBookingAction = async (id, reason) => {
     try {
       await rejectBooking(id, reason);
+      showToast("Booking rejected.");
+      setError("");
       await loadBookings();
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to reject booking.");
     }
   };
 
-  const handleCancel = async (id) => {
+  const cancelBookingAction = async (id) => {
     try {
       await cancelBooking(id);
+      showToast("Booking cancelled.");
+      setError("");
       await loadBookings();
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to cancel booking.");
     }
+  };
+
+  const deleteBookingAction = async (id) => {
+    try {
+      await deleteAdminBooking(id);
+      showToast("Booking deleted.");
+      setError("");
+      await loadBookings();
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to delete booking.");
+    }
+  };
+
+  const submitConfirmation = async (inputValue) => {
+    const { action, bookingId } = confirmDialog;
+    closeConfirmDialog();
+
+    if (!bookingId || !action) {
+      return;
+    }
+
+    if (action === "approve") {
+      await approveBookingAction(bookingId, inputValue || undefined);
+      return;
+    }
+
+    if (action === "reject") {
+      await rejectBookingAction(bookingId, inputValue || "Rejected by admin");
+      return;
+    }
+
+    if (action === "cancel") {
+      await cancelBookingAction(bookingId);
+      return;
+    }
+
+    if (action === "delete") {
+      await deleteBookingAction(bookingId);
+    }
+  };
+
+  const openApproveDialog = (bookingId) => {
+    setConfirmDialog({
+      open: true,
+      action: "approve",
+      bookingId,
+      title: "Approve booking?",
+      description: "This booking will be moved to APPROVED status.",
+      confirmText: "Approve",
+      variant: "neutral",
+      inputLabel: "Approval note (optional)",
+      inputPlaceholder: "Approved by admin",
+      inputDefaultValue: "Approved by admin",
+      inputRequired: false,
+      multilineInput: false,
+    });
+  };
+
+  const openRejectDialog = (bookingId) => {
+    setConfirmDialog({
+      open: true,
+      action: "reject",
+      bookingId,
+      title: "Reject booking?",
+      description: "Rejection reason will be saved and shown to the user.",
+      confirmText: "Reject",
+      variant: "danger",
+      inputLabel: "Rejection reason",
+      inputPlaceholder: "Enter a clear reason",
+      inputDefaultValue: "",
+      inputRequired: true,
+      multilineInput: true,
+    });
+  };
+
+  const openCancelDialog = (bookingId) => {
+    setConfirmDialog({
+      open: true,
+      action: "cancel",
+      bookingId,
+      title: "Cancel booking?",
+      description: "This will change booking status to CANCELLED.",
+      confirmText: "Cancel Booking",
+      variant: "neutral",
+      inputLabel: "",
+      inputPlaceholder: "",
+      inputDefaultValue: "",
+      inputRequired: false,
+      multilineInput: false,
+    });
+  };
+
+  const openDeleteDialog = (bookingId) => {
+    setConfirmDialog({
+      open: true,
+      action: "delete",
+      bookingId,
+      title: "Delete booking?",
+      description: "This action cannot be undone.",
+      confirmText: "Delete",
+      variant: "danger",
+      inputLabel: "",
+      inputPlaceholder: "",
+      inputDefaultValue: "",
+      inputRequired: false,
+      multilineInput: false,
+    });
   };
 
   const filteredBookings = useMemo(() => {
@@ -218,7 +356,7 @@ function AdminBookingsPage() {
                         } ${(isFinalized && lockedAction !== "approve") ? "cursor-not-allowed opacity-40" : ""}`}
                         title="Approve"
                         aria-label="Approve"
-                        onClick={() => handleApprove(booking.id)}
+                        onClick={() => openApproveDialog(booking.id)}
                       >
                         <HiOutlineCheckCircle className="h-5 w-5" />
                       </button>
@@ -232,7 +370,7 @@ function AdminBookingsPage() {
                         } ${(isFinalized && lockedAction !== "reject") ? "cursor-not-allowed opacity-40" : ""}`}
                         title="Reject"
                         aria-label="Reject"
-                        onClick={() => handleReject(booking.id)}
+                        onClick={() => openRejectDialog(booking.id)}
                       >
                         <HiOutlineXCircle className="h-5 w-5" />
                       </button>
@@ -246,9 +384,18 @@ function AdminBookingsPage() {
                         } ${(isFinalized && lockedAction !== "cancel") ? "cursor-not-allowed opacity-40" : ""}`}
                         title="Cancel"
                         aria-label="Cancel"
-                        onClick={() => handleCancel(booking.id)}
+                        onClick={() => openCancelDialog(booking.id)}
                       >
                         <HiOutlineNoSymbol className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-rose-50 hover:text-rose-700"
+                        title="Delete booking"
+                        aria-label="Delete booking"
+                        onClick={() => openDeleteDialog(booking.id)}
+                      >
+                        <HiOutlineTrash className="h-5 w-5" />
                       </button>
                     </div>
                   </td>
@@ -275,6 +422,28 @@ function AdminBookingsPage() {
           />
         )}
       </section>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText={confirmDialog.confirmText}
+        variant={confirmDialog.variant}
+        inputLabel={confirmDialog.inputLabel}
+        inputPlaceholder={confirmDialog.inputPlaceholder}
+        inputDefaultValue={confirmDialog.inputDefaultValue}
+        inputRequired={confirmDialog.inputRequired}
+        multilineInput={confirmDialog.multilineInput}
+        onCancel={closeConfirmDialog}
+        onConfirm={(inputValue) => void submitConfirmation(inputValue)}
+      />
+
+      <FloatingToast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </AuthenticatedLayout>
   );
 }

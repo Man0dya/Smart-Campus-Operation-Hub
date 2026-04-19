@@ -5,6 +5,7 @@ import com.smartcampus.enums.PriorityLevel;
 import com.smartcampus.enums.Role;
 import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.exception.ConflictException;
+import com.smartcampus.exception.ForbiddenOperationException;
 import com.smartcampus.model.Ticket;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.TicketRepository;
@@ -19,6 +20,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -80,4 +82,28 @@ class TicketServiceTest {
         assertThrows(IllegalArgumentException.class, () ->
                 ticketService.updateTicketStatus("t1", TicketStatus.REJECTED, null, "", actor, true));
     }
+
+        @Test
+        void deleteTicket_shouldRejectNonAdmin() {
+                User actor = User.builder().id("user-1").role(Role.USER).build();
+
+                assertThrows(ForbiddenOperationException.class, () ->
+                                ticketService.deleteTicket("t1", actor));
+        }
+
+        @Test
+        void deleteTicket_shouldDeleteWhenActorIsAdmin() {
+                User actor = User.builder().id("admin-1").role(Role.ADMIN).build();
+                Ticket ticket = Ticket.builder()
+                                .id("t1")
+                                .reportedBy("user-1")
+                                .status(TicketStatus.OPEN)
+                                .build();
+
+                when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
+
+                ticketService.deleteTicket("t1", actor);
+
+                verify(ticketRepository).deleteById("t1");
+        }
 }

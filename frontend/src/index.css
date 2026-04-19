@@ -246,6 +246,30 @@
     animation: fadeUp 320ms ease-out both;
   }
 
+  .confirm-overlay-in {
+    animation: overlayFadeIn 180ms ease-out both;
+  }
+
+  .confirm-overlay-out {
+    animation: overlayFadeOut 160ms ease-in both;
+  }
+
+  .confirm-panel-in {
+    animation: confirmPanelIn 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  }
+
+  .confirm-panel-out {
+    animation: confirmPanelOut 160ms ease-in both;
+  }
+
+  .toast-in {
+    animation: toastIn 220ms ease-out both;
+  }
+
+  .toast-out {
+    animation: toastOut 170ms ease-in both;
+  }
+
   .stagger-1 {
     animation-delay: 60ms;
   }
@@ -271,5 +295,67 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlayFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes confirmPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes confirmPanelOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(22px);
   }
 }

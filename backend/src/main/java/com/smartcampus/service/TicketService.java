@@ -2,6 +2,7 @@ package com.smartcampus.service;
 
 import com.smartcampus.dto.TicketCreateRequest;
 import com.smartcampus.enums.TicketStatus;
+import com.smartcampus.enums.Role;
 import com.smartcampus.exception.ForbiddenOperationException;
 import com.smartcampus.exception.ConflictException;
 import com.smartcampus.exception.ResourceNotFoundException;
@@ -126,6 +127,24 @@ public class TicketService {
         ticket.setAttachments(existing);
         ticket.setUpdatedAt(Instant.now().toString());
         return ticketRepository.save(ticket);
+    }
+
+    public void deleteTicket(String ticketId, User actor) {
+        if (actor == null || actor.getRole() != Role.ADMIN) {
+            throw new ForbiddenOperationException("Only admin can delete tickets.");
+        }
+
+        Ticket ticket = getTicketById(ticketId);
+        ticketRepository.deleteById(ticketId);
+
+        if (!ticket.getReportedBy().equals(actor.getId())) {
+            notificationService.createNotification(
+                    ticket.getReportedBy(),
+                    "Ticket Deleted",
+                    "Your ticket " + ticketId + " was deleted by an administrator.",
+                    "TICKET"
+            );
+        }
     }
 
     private boolean isValidTransition(TicketStatus current, TicketStatus next) {

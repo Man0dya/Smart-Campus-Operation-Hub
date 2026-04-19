@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createBooking } from "../services/bookingApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
+import FloatingToast from "../components/common/FloatingToast";
 
 const initialForm = {
   resourceId: "",
@@ -13,8 +14,12 @@ const initialForm = {
 
 function CreateBookingPage() {
   const [form, setForm] = useState(initialForm);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ open: true, message, type });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,12 +34,11 @@ function CreateBookingPage() {
         ...form,
         expectedAttendees: form.expectedAttendees ? Number(form.expectedAttendees) : null,
       });
-      setMessage("Booking request submitted successfully.");
+      showToast("Booking request submitted successfully.");
       setError("");
       setForm(initialForm);
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to create booking request.");
-      setMessage("");
     }
   };
 
@@ -97,8 +101,14 @@ function CreateBookingPage() {
         </form>
       </section>
 
-      {message && <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}
       {error && <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+
+      <FloatingToast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </AuthenticatedLayout>
   );
 }

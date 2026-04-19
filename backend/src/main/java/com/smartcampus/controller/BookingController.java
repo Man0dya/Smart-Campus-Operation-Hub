@@ -79,4 +79,13 @@ public class BookingController {
         boolean isAdmin = currentUserService.isAdmin(user);
         return bookingService.cancelBooking(id, user.getId(), isAdmin);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBooking(@PathVariable String id,
+                                              @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        currentUserService.requireAdmin(user);
+        bookingService.deleteBooking(id, user.getId());
+        return ResponseEntity.noContent().build();
+    }
 }

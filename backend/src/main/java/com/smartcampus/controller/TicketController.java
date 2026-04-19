@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -123,5 +124,14 @@ public class TicketController {
         return ResponseEntity.ok()
                 .contentType(mediaType)
                 .body(file);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTicket(@PathVariable String id,
+                                             @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        currentUserService.requireAdmin(user);
+        ticketService.deleteTicket(id, user);
+        return ResponseEntity.noContent().build();
     }
 }
