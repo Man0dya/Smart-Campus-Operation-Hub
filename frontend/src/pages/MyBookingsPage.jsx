@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cancelBooking, getMyBookings } from "../services/bookingApi";
+import { getAllResources } from "../services/resourceApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import PaginationControls from "../components/common/PaginationControls";
 import StyledSelect from "../components/common/StyledSelect";
@@ -22,6 +23,7 @@ const getBookingStatusClass = (status) => {
 
 function MyBookingsPage() {
   const [bookings, setBookings] = useState([]);
+  const [resourceNameById, setResourceNameById] = useState({});
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -45,6 +47,31 @@ function MyBookingsPage() {
     return () => clearTimeout(timer);
   }, [loadBookings]);
 
+  useEffect(() => {
+    const loadResources = async () => {
+      try {
+        const res = await getAllResources();
+        const resources = Array.isArray(res.data) ? res.data : [];
+        const nextMap = resources.reduce((accumulator, resource) => {
+          if (resource?.id) {
+            accumulator[resource.id] = resource.name || resource.id;
+          }
+          return accumulator;
+        }, {});
+        setResourceNameById(nextMap);
+      } catch {
+        setResourceNameById({});
+      }
+    };
+
+    void loadResources();
+  }, []);
+
+  const getResourceName = useCallback(
+    (resourceId) => resourceNameById[resourceId] || resourceId || "Unknown Resource",
+    [resourceNameById]
+  );
+
   const handleCancel = async (bookingId) => {
     try {
       await cancelBooking(bookingId);
@@ -66,6 +93,7 @@ function MyBookingsPage() {
       }
 
       const haystack = [
+        getResourceName(booking.resourceId),
         booking.resourceId,
         booking.date,
         booking.startTime,
@@ -79,7 +107,7 @@ function MyBookingsPage() {
 
       return matchesStatus && haystack.includes(query);
     });
-  }, [bookings, searchQuery, statusFilter]);
+  }, [bookings, searchQuery, statusFilter, getResourceName]);
 
   useEffect(() => {
     setPage(1);
@@ -134,7 +162,7 @@ function MyBookingsPage() {
         {paginatedBookings.map((booking) => (
           <article key={booking.id} className="panel space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">{booking.resourceId}</h3>
+              <h3 className="font-bold text-slate-900">{getResourceName(booking.resourceId)}</h3>
               <span className={`chip ${getBookingStatusClass(booking.status)}`}>
                 {booking.status}
               </span>
