@@ -22,6 +22,12 @@ const bookingCategoryOptions = [
   { value: "EQUIPMENT", label: "Equipment" },
 ];
 
+const getTodayLocalDateString = () => {
+  const now = new Date();
+  const timezoneOffsetMs = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - timezoneOffsetMs).toISOString().split("T")[0];
+};
+
 function CreateBookingPage() {
   const [form, setForm] = useState(initialForm);
   const [resources, setResources] = useState([]);
@@ -29,6 +35,7 @@ function CreateBookingPage() {
   const [loadingResources, setLoadingResources] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+  const minBookingDate = useMemo(() => getTodayLocalDateString(), []);
 
   const showToast = (message, type = "success") => {
     setToast({ open: true, message, type });
@@ -103,6 +110,11 @@ function CreateBookingPage() {
       return;
     }
 
+    if (form.date && form.date < minBookingDate) {
+      setError("Booking date cannot be in the past.");
+      return;
+    }
+
     try {
       await createBooking({
         ...form,
@@ -152,7 +164,15 @@ function CreateBookingPage() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Date</label>
-            <input className="field" name="date" type="date" value={form.date} onChange={handleChange} required />
+            <input
+              className="field"
+              name="date"
+              type="date"
+              value={form.date}
+              onChange={handleChange}
+              min={minBookingDate}
+              required
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Expected Attendees</label>
