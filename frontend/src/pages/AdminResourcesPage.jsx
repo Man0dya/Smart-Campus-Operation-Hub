@@ -14,6 +14,8 @@ import {
 } from "react-icons/hi2";
 import PaginationControls from "../components/common/PaginationControls";
 import StyledSelect from "../components/common/StyledSelect";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import FloatingToast from "../components/common/FloatingToast";
 
 const getResourceStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -45,12 +47,17 @@ function AdminResourcesPage() {
   const [editingId, setEditingId] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, resourceId: "" });
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ open: true, message, type });
+  };
 
   const loadResources = useCallback(async () => {
     try {
@@ -87,10 +94,10 @@ function AdminResourcesPage() {
       const payload = toPayload(form);
       if (editingId) {
         await updateResource(editingId, payload);
-        setMessage("Resource updated.");
+        showToast("Resource updated.");
       } else {
         await createResource(payload);
-        setMessage("Resource created.");
+        showToast("Resource created.");
       }
       setForm(emptyForm);
       setEditingId("");
@@ -98,7 +105,6 @@ function AdminResourcesPage() {
       setError("");
       await loadResources();
     } catch (err) {
-      setMessage("");
       setError(err?.response?.data?.error || "Failed to save resource.");
     }
   };
@@ -116,14 +122,12 @@ function AdminResourcesPage() {
     });
     setEditingId(resource.id);
     setDrawerOpen(true);
-    setMessage("");
     setError("");
   };
 
   const openCreateDrawer = () => {
     setEditingId("");
     setForm(emptyForm);
-    setMessage("");
     setError("");
     setDrawerOpen(true);
   };
@@ -133,13 +137,9 @@ function AdminResourcesPage() {
   };
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm("Delete this resource?");
-    if (!confirmed) {
-      return;
-    }
     try {
       await deleteResource(id);
-      setMessage("Resource deleted.");
+      showToast("Resource deleted.");
       setError("");
       if (editingId === id) {
         setEditingId("");
@@ -147,9 +147,25 @@ function AdminResourcesPage() {
       }
       await loadResources();
     } catch (err) {
-      setMessage("");
       setError(err?.response?.data?.error || "Failed to delete resource.");
     }
+  };
+
+  const openDeleteDialog = (resourceId) => {
+    setConfirmDialog({ open: true, resourceId });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, resourceId: "" });
+  };
+
+  const handleConfirmDelete = async () => {
+    const resourceId = confirmDialog.resourceId;
+    closeConfirmDialog();
+    if (!resourceId) {
+      return;
+    }
+    await handleDelete(resourceId);
   };
 
   const filteredResources = useMemo(() => {
@@ -209,7 +225,6 @@ function AdminResourcesPage() {
         </button>
       </section>
 
-      {message && <p className="status-success mb-4 rounded-xl px-4 py-3 text-sm">{message}</p>}
       {error && <p className="status-error mb-4 rounded-xl px-4 py-3 text-sm">{error}</p>}
 
       <section className="panel mb-5 flex flex-wrap items-center gap-3">
@@ -293,7 +308,7 @@ function AdminResourcesPage() {
                         className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-rose-50 hover:text-rose-700"
                         title="Delete Resource"
                         aria-label="Delete Resource"
-                        onClick={() => handleDelete(resource.id)}
+                        onClick={() => openDeleteDialog(resource.id)}
                       >
                         <HiOutlineTrash className="h-4 w-4" />
                       </button>
@@ -447,6 +462,22 @@ function AdminResourcesPage() {
           </div>
         </form>
       </aside>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Delete resource?"
+        description="This action cannot be undone."
+        confirmText="Delete"
+        onCancel={closeConfirmDialog}
+        onConfirm={() => void handleConfirmDelete()}
+      />
+
+      <FloatingToast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </AuthenticatedLayout>
   );
 }

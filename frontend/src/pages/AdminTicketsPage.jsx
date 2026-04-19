@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
-import { getAllTickets, updateTicketStatus } from "../services/ticketApi";
+import { deleteAdminTicket, getAllTickets, updateTicketStatus } from "../services/ticketApi";
 import {
   HiOutlinePencilSquare,
   HiOutlineEye,
   HiOutlineXMark,
+  HiOutlineTrash,
 } from "react-icons/hi2";
 import PaginationControls from "../components/common/PaginationControls";
 import StyledSelect from "../components/common/StyledSelect";
+import AuthContext from "../context/auth-context";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import FloatingToast from "../components/common/FloatingToast";
 
 const getTicketStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -27,9 +31,14 @@ const getTicketStatusClass = (status) => {
 };
 
 function AdminTicketsPage() {
+  const { user } = useContext(AuthContext);
   const [tickets, setTickets] = useState([]);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    ticketId: "",
+  });
   const [drafts, setDrafts] = useState({});
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
@@ -136,6 +145,14 @@ function AdminTicketsPage() {
     setDrawerOpen(false);
   };
 
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, ticketId: "" });
+  };
+
+  const showToast = (message, type = "success") => {
+    setToast({ open: true, message, type });
+  };
+
   const handleUpdate = async () => {
     const draft = drafts[activeTicketId];
     if (!draft?.status) {
@@ -149,14 +166,45 @@ function AdminTicketsPage() {
         assignedTo: draft.assignedTo || undefined,
         resolutionNotes: draft.resolutionNotes || undefined,
       });
-      setMessage(`Ticket ${activeTicketId} updated.`);
+      showToast(`Ticket ${activeTicketId} updated.`);
       setError("");
       setDrawerOpen(false);
       await loadTickets();
     } catch (err) {
-      setMessage("");
       setError(err?.response?.data?.error || "Failed to update ticket.");
     }
+  };
+
+  const deleteTicketAction = async (ticketId) => {
+    try {
+      await deleteAdminTicket(ticketId);
+      showToast(`Ticket ${ticketId} deleted.`);
+      setError("");
+
+      if (activeTicketId === ticketId) {
+        setDrawerOpen(false);
+      }
+
+      await loadTickets();
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to delete ticket.");
+    }
+  };
+
+  const openDeleteDialog = (ticketId) => {
+    setConfirmDialog({
+      open: true,
+      ticketId,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    const ticketId = confirmDialog.ticketId;
+    closeConfirmDialog();
+    if (!ticketId) {
+      return;
+    }
+    await deleteTicketAction(ticketId);
   };
 
   const activeTicket = useMemo(
@@ -207,7 +255,6 @@ function AdminTicketsPage() {
         />
       </section>
 
-      {message && <p className="status-success mb-4 rounded-xl px-4 py-3 text-sm">{message}</p>}
       {error && <p className="status-error mb-4 rounded-xl px-4 py-3 text-sm">{error}</p>}
 
       <section className="panel overflow-hidden p-0">
@@ -257,6 +304,17 @@ function AdminTicketsPage() {
                       >
                         <HiOutlineEye className="h-4 w-4" />
                       </Link>
+                      {user?.role === "ADMIN" && (
+                        <button
+                          type="button"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-rose-50 hover:text-rose-700"
+                          title="Delete ticket"
+                          aria-label="Delete ticket"
+                          onClick={() => openDeleteDialog(ticket.id)}
+                        >
+                          <HiOutlineTrash className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -350,6 +408,22 @@ function AdminTicketsPage() {
           </div>
         </div>
       </aside>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Delete ticket?"
+        description="This action cannot be undone."
+        confirmText="Delete"
+        onCancel={closeConfirmDialog}
+        onConfirm={() => void handleConfirmDelete()}
+      />
+
+      <FloatingToast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </AuthenticatedLayout>
   );
 }

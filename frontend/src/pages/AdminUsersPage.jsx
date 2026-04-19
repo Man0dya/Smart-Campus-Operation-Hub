@@ -16,6 +16,8 @@ import {
 import AuthContext from "../context/auth-context";
 import PaginationControls from "../components/common/PaginationControls";
 import StyledSelect from "../components/common/StyledSelect";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import FloatingToast from "../components/common/FloatingToast";
 
 const emptyForm = {
   name: "",
@@ -46,9 +48,14 @@ function AdminUsersPage() {
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, userId: "" });
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ open: true, message, type });
+  };
 
   const loadUsers = useCallback(async () => {
     try {
@@ -102,7 +109,6 @@ function AdminUsersPage() {
   const openCreateDrawer = () => {
     setEditingId("");
     setForm(emptyForm);
-    setMessage("");
     setError("");
     setDrawerOpen(true);
   };
@@ -115,7 +121,6 @@ function AdminUsersPage() {
       role: selectedUser.role || "USER",
       password: "",
     });
-    setMessage("");
     setError("");
     setDrawerOpen(true);
   };
@@ -144,10 +149,10 @@ function AdminUsersPage() {
     try {
       if (editingId) {
         await updateAdminUser(editingId, payload);
-        setMessage("User updated.");
+        showToast("User updated.");
       } else {
         await createAdminUser(payload);
-        setMessage("User created.");
+        showToast("User created.");
       }
 
       setDrawerOpen(false);
@@ -156,26 +161,36 @@ function AdminUsersPage() {
       setError("");
       await loadUsers();
     } catch (err) {
-      setMessage("");
       setError(err?.response?.data?.error || "Failed to save user.");
     }
   };
 
   const handleDelete = async (userId) => {
-    const confirmed = window.confirm("Delete this user?");
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await deleteAdminUser(userId);
-      setMessage("User deleted.");
+      showToast("User deleted.");
       setError("");
       await loadUsers();
     } catch (err) {
-      setMessage("");
       setError(err?.response?.data?.error || "Failed to delete user.");
     }
+  };
+
+  const openDeleteDialog = (userId) => {
+    setConfirmDialog({ open: true, userId });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, userId: "" });
+  };
+
+  const handleConfirmDelete = async () => {
+    const userId = confirmDialog.userId;
+    closeConfirmDialog();
+    if (!userId) {
+      return;
+    }
+    await handleDelete(userId);
   };
 
   return (
@@ -218,7 +233,6 @@ function AdminUsersPage() {
         </div>
       </section>
 
-      {message && <p className="status-success mb-4 rounded-xl px-4 py-3 text-sm">{message}</p>}
       {error && <p className="status-error mb-4 rounded-xl px-4 py-3 text-sm">{error}</p>}
 
       <section className="panel overflow-hidden p-0">
@@ -267,7 +281,7 @@ function AdminUsersPage() {
                             ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
                             : "border-slate-300 bg-white text-slate-600 hover:bg-rose-50 hover:text-rose-700"
                         }`}
-                        onClick={() => void handleDelete(user.id)}
+                        onClick={() => openDeleteDialog(user.id)}
                         title="Delete user"
                         aria-label="Delete user"
                         disabled={currentUser?.id === user.id}
@@ -374,6 +388,22 @@ function AdminUsersPage() {
           </div>
         </form>
       </aside>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Delete user?"
+        description="This action cannot be undone."
+        confirmText="Delete"
+        onCancel={closeConfirmDialog}
+        onConfirm={() => void handleConfirmDelete()}
+      />
+
+      <FloatingToast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </AuthenticatedLayout>
   );
 }

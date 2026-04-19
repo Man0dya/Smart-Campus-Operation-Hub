@@ -125,6 +125,22 @@ public class BookingService {
         return saved;
     }
 
+    public void deleteBooking(String bookingId, String actorUserId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
+
+        bookingRepository.deleteById(bookingId);
+
+        if (!booking.getUserId().equals(actorUserId)) {
+            notificationService.createNotification(
+                    booking.getUserId(),
+                    "Booking Deleted",
+                    "Your booking " + bookingId + " was deleted by an administrator.",
+                    "BOOKING"
+            );
+        }
+    }
+
     private Booking updateStatus(String bookingId, BookingStatus targetStatus, String adminReason, String actorUserId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));

@@ -4,6 +4,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import AuthContext from "../context/auth-context";
 import { loginLocalUser, registerLocalUser } from "../services/authApi";
+import FloatingToast from "../components/common/FloatingToast";
 
 const initialForm = {
   name: "",
@@ -68,7 +69,7 @@ function LoginPage() {
   const [form, setForm] = useState(initialForm);
   const [touched, setTouched] = useState({});
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
   const [submitting, setSubmitting] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -78,6 +79,10 @@ function LoginPage() {
   const registerErrors = validateRegisterForm(form);
   const activeErrors = mode === "login" ? loginErrors : registerErrors;
   const hasValidationErrors = Object.keys(activeErrors).length > 0;
+
+  const showToast = (message, type = "success") => {
+    setToast({ open: true, message, type });
+  };
 
   const routeByRole = (role) => {
     if (role === "ADMIN") return "/admin";
@@ -106,7 +111,6 @@ function LoginPage() {
   const handleLocalLogin = async (event) => {
     event.preventDefault();
     setError("");
-    setMessage("");
 
     setTouched((prev) => ({ ...prev, email: true, password: true }));
     if (Object.keys(loginErrors).length > 0) {
@@ -140,7 +144,6 @@ function LoginPage() {
   const handleRegister = async (event) => {
     event.preventDefault();
     setError("");
-    setMessage("");
 
     setTouched((prev) => ({
       ...prev,
@@ -162,7 +165,7 @@ function LoginPage() {
         email: form.email,
         password: form.password,
       });
-      setMessage("Account created. You can now log in as USER.");
+      showToast("Account created. You can now log in as USER.");
       setForm((prev) => ({ ...prev, password: "", confirmPassword: "" }));
       setTouched({});
       setShowRegisterPassword(false);
@@ -179,7 +182,6 @@ function LoginPage() {
     setMode(nextMode);
     setTouched({});
     setError("");
-    setMessage("");
     setShowLoginPassword(false);
     setShowRegisterPassword(false);
     setShowConfirmPassword(false);
@@ -394,8 +396,14 @@ function LoginPage() {
             Continue with Google
           </button>
 
-          {message && <p className="status-success rounded-xl px-3 py-2 text-sm">{message}</p>}
           {error && <p className="status-error rounded-xl px-3 py-2 text-sm">{error}</p>}
+
+          <FloatingToast
+            open={toast.open}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+          />
         </section>
       </div>
     </div>

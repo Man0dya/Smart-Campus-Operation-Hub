@@ -99,4 +99,19 @@ class BookingServiceTest {
 
         assertThrows(ConflictException.class, () -> bookingService.approveBooking("b1", "ok", "admin-1"));
     }
+
+    @Test
+    void deleteBooking_shouldRemoveBookingById() {
+        Booking existing = Booking.builder()
+                .id("b1")
+                .userId("user-1")
+                .status(BookingStatus.PENDING)
+                .build();
+
+        when(bookingRepository.findById("b1")).thenReturn(java.util.Optional.of(existing));
+
+        bookingService.deleteBooking("b1", "admin-1");
+
+        verify(bookingRepository).deleteById("b1");
+    }
 }

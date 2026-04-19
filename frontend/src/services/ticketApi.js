@@ -6,6 +6,7 @@ export const getAllTickets = () => api.get("/tickets");
 export const getTicketById = (id) => api.get(`/tickets/${id}`);
 export const updateTicketStatus = (id, payload) =>
   api.patch(`/tickets/${id}/status`, payload);
+export const deleteAdminTicket = (id) => api.delete(`/tickets/${id}`);
 
 export const uploadTicketAttachments = (id, files) => {
   const formData = new FormData();

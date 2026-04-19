@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createTicket, uploadTicketAttachments } from "../services/ticketApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import StyledSelect from "../components/common/StyledSelect";
+import FloatingToast from "../components/common/FloatingToast";
 
 function CreateTicketPage() {
   const [form, setForm] = useState({
@@ -11,9 +12,13 @@ function CreateTicketPage() {
     priority: "MEDIUM",
     contactDetails: "",
   });
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [files, setFiles] = useState([]);
+  const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ open: true, message, type });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,7 +34,7 @@ function CreateTicketPage() {
         await uploadTicketAttachments(ticketRes.data.id, files);
       }
 
-      setMessage("Ticket created successfully.");
+      showToast("Ticket created successfully.");
       setError("");
       setFiles([]);
       setForm({
@@ -41,7 +46,6 @@ function CreateTicketPage() {
       });
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to create ticket.");
-      setMessage("");
     }
   };
 
@@ -124,8 +128,14 @@ function CreateTicketPage() {
         </form>
       </section>
 
-      {message && <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}
       {error && <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+
+      <FloatingToast
+        open={toast.open}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+      />
     </AuthenticatedLayout>
   );
 }
