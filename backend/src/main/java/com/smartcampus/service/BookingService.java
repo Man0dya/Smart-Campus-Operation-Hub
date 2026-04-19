@@ -141,8 +141,8 @@ public class BookingService {
             throw new ConflictException("You can only cancel your own bookings.");
         }
 
-        if (booking.getStatus() != BookingStatus.APPROVED) {
-            throw new ConflictException("Only approved bookings can be cancelled.");
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.APPROVED) {
+            throw new ConflictException("Only pending or approved bookings can be cancelled.");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
