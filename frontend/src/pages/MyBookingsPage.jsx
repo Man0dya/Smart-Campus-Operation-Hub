@@ -4,6 +4,7 @@ import { getAllResources } from "../services/resourceApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import PaginationControls from "../components/common/PaginationControls";
 import StyledSelect from "../components/common/StyledSelect";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const getBookingStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -29,6 +30,7 @@ function MyBookingsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, bookingId: "" });
 
   const loadBookings = useCallback(async () => {
     try {
@@ -79,6 +81,25 @@ function MyBookingsPage() {
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to cancel booking.");
     }
+  };
+
+  const openCancelDialog = (bookingId) => {
+    setConfirmDialog({ open: true, bookingId });
+  };
+
+  const closeCancelDialog = () => {
+    setConfirmDialog({ open: false, bookingId: "" });
+  };
+
+  const handleConfirmCancel = async () => {
+    const bookingId = confirmDialog.bookingId;
+    closeCancelDialog();
+
+    if (!bookingId) {
+      return;
+    }
+
+    await handleCancel(bookingId);
   };
 
   const filteredBookings = useMemo(() => {
@@ -179,14 +200,24 @@ function MyBookingsPage() {
               </p>
             )}
 
-            {booking.status !== "CANCELLED" && (
-              <button className="btn-secondary" onClick={() => handleCancel(booking.id)}>
+            {booking.status && ["PENDING", "APPROVED"].includes(String(booking.status).toUpperCase()) && (
+              <button className="btn-secondary" onClick={() => openCancelDialog(booking.id)}>
                 Cancel Booking
               </button>
             )}
           </article>
         ))}
       </section>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title="Cancel Booking?"
+        description="Are you sure you want to cancel this booking? This action cannot be undone."
+        confirmText="Yes, Cancel"
+        cancelText="Keep Booking"
+        onCancel={closeCancelDialog}
+        onConfirm={handleConfirmCancel}
+      />
 
       {filteredBookings.length > 0 && (
         <section className="panel mt-4 p-0">
