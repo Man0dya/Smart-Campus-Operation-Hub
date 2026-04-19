@@ -302,7 +302,7 @@ function CreateBookingPage() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Resource ID</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Resource Name</label>
             <StyledSelect
               className="w-full"
               name="resourceId"
