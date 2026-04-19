@@ -28,9 +28,12 @@ function StyledSelect({
   disabled = false,
   menuClassName = "",
   menuPlacement = "bottom",
+  searchable = false,
+  searchPlaceholder = "Search...",
 }) {
   const rootRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const normalizedOptions = useMemo(
     () => options.map(normalizeOption),
@@ -41,6 +44,18 @@ function StyledSelect({
     () => normalizedOptions.find((option) => String(option.value) === String(value)),
     [normalizedOptions, value]
   );
+
+  const filteredOptions = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!searchable || !query) {
+      return normalizedOptions;
+    }
+
+    return normalizedOptions.filter((option) =>
+      option.label.toLowerCase().includes(query) || String(option.value).toLowerCase().includes(query)
+    );
+  }, [normalizedOptions, searchTerm, searchable]);
 
   useEffect(() => {
     if (!open) {
@@ -70,6 +85,7 @@ function StyledSelect({
 
   const handleSelect = (nextValue) => {
     setOpen(false);
+    setSearchTerm("");
 
     if (!onChange) {
       return;
@@ -107,7 +123,19 @@ function StyledSelect({
             menuPlacement === "top" ? "bottom-full mb-1" : "mt-1"
           } ${menuClassName}`}
         >
-          {normalizedOptions.map((option) => {
+          {searchable && (
+            <div className="border-b border-slate-200 p-2">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder={searchPlaceholder}
+                className="field h-9"
+              />
+            </div>
+          )}
+
+          {filteredOptions.map((option) => {
             const isSelected = String(option.value) === String(value);
 
             return (
@@ -125,6 +153,10 @@ function StyledSelect({
               </button>
             );
           })}
+
+          {filteredOptions.length === 0 && (
+            <p className="px-3 py-2 text-sm text-slate-500">No options found.</p>
+          )}
         </div>
       )}
     </div>
