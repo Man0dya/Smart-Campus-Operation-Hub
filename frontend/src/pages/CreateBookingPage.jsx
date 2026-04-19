@@ -28,6 +28,19 @@ const getTodayLocalDateString = () => {
   return new Date(now.getTime() - timezoneOffsetMs).toISOString().split("T")[0];
 };
 
+const toMinutes = (timeString) => {
+  if (!timeString || !timeString.includes(":")) {
+    return null;
+  }
+
+  const [hours, minutes] = timeString.split(":").map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+};
+
 function CreateBookingPage() {
   const [form, setForm] = useState(initialForm);
   const [resources, setResources] = useState([]);
@@ -115,6 +128,26 @@ function CreateBookingPage() {
       return;
     }
 
+    const startMinutes = toMinutes(form.startTime);
+    const endMinutes = toMinutes(form.endTime);
+
+    if (startMinutes === null || endMinutes === null) {
+      setError("Please select a valid start and end time.");
+      return;
+    }
+
+    const durationMinutes = endMinutes - startMinutes;
+
+    if (durationMinutes < 30) {
+      setError("Time range must be at least 30 minutes.");
+      return;
+    }
+
+    if (durationMinutes > 240) {
+      setError("Time range cannot exceed 4 hours.");
+      return;
+    }
+
     try {
       await createBooking({
         ...form,
@@ -193,6 +226,7 @@ function CreateBookingPage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">End Time</label>
             <input className="field" name="endTime" type="time" value={form.endTime} onChange={handleChange} required />
+            <p className="mt-1 text-xs text-slate-500">Duration must be between 30 minutes and 4 hours.</p>
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-slate-700">Purpose</label>
