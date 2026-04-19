@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createBooking } from "../services/bookingApi";
+import { createBooking, getBookingAvailability } from "../services/bookingApi";
 import { getAllResources } from "../services/resourceApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import FloatingToast from "../components/common/FloatingToast";
@@ -41,11 +41,19 @@ const toMinutes = (timeString) => {
   return hours * 60 + minutes;
 };
 
+const toTimeLabel = (totalMinutes) => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+
 function CreateBookingPage() {
   const [form, setForm] = useState(initialForm);
   const [resources, setResources] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [loadingResources, setLoadingResources] = useState(false);
+  const [availability, setAvailability] = useState(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
   const minBookingDate = useMemo(() => getTodayLocalDateString(), []);
@@ -114,6 +122,121 @@ function CreateBookingPage() {
       setForm((prev) => ({ ...prev, resourceId: "" }));
     }
   }, [filteredResources, form.resourceId]);
+
+  useEffect(() => {
+    setAvailability(null);
+    setForm((prev) => ({ ...prev, startTime: "", endTime: "" }));
+
+    if (!form.resourceId || !form.date) {
+      return;
+    }
+
+    const loadAvailability = async () => {
+      setLoadingAvailability(true);
+
+      try {
+        const res = await getBookingAvailability(form.resourceId, form.date);
+        setAvailability(res.data || null);
+      } catch (err) {
+        setAvailability(null);
+        setError(err?.response?.data?.error || "Failed to load available time slots.");
+      } finally {
+        setLoadingAvailability(false);
+      }
+    };
+
+    void loadAvailability();
+  }, [form.resourceId, form.date]);
+
+  const availableSegments = useMemo(() => {
+    const dayStart = toMinutes(availability?.availabilityStart || "");
+    const dayEnd = toMinutes(availability?.availabilityEnd || "");
+
+    if (dayStart === null || dayEnd === null || dayEnd <= dayStart) {
+      return [];
+    }
+
+    const blocked = (availability?.blockedIntervals || [])
+      .map((interval) => ({
+        start: toMinutes(interval.startTime),
+        end: toMinutes(interval.endTime),
+      }))
+      .filter((interval) => interval.start !== null && interval.end !== null && interval.end > interval.start)
+      .sort((left, right) => left.start - right.start);
+
+    const merged = [];
+    blocked.forEach((interval) => {
+      if (merged.length === 0 || interval.start > merged[merged.length - 1].end) {
+        merged.push({ ...interval });
+      } else {
+        merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
+      }
+    });
+
+    const segments = [];
+    let cursor = dayStart;
+
+    merged.forEach((interval) => {
+      if (interval.start > cursor) {
+        segments.push({ start: cursor, end: Math.min(interval.start, dayEnd) });
+      }
+      cursor = Math.max(cursor, interval.end);
+    });
+
+    if (cursor < dayEnd) {
+      segments.push({ start: cursor, end: dayEnd });
+    }
+
+    return segments.filter((segment) => segment.end - segment.start >= 30);
+  }, [availability]);
+
+  const startTimeOptions = useMemo(() => {
+    const options = [];
+
+    availableSegments.forEach((segment) => {
+      for (let minute = segment.start; minute + 30 <= segment.end; minute += 30) {
+        const value = toTimeLabel(minute);
+        options.push({ value, label: value });
+      }
+    });
+
+    return options;
+  }, [availableSegments]);
+
+  const endTimeOptions = useMemo(() => {
+    const start = toMinutes(form.startTime);
+
+    if (start === null) {
+      return [];
+    }
+
+    const segment = availableSegments.find((candidate) => start >= candidate.start && start < candidate.end);
+    if (!segment) {
+      return [];
+    }
+
+    const options = [];
+    for (let minute = start + 30; minute <= segment.end && minute - start <= 240; minute += 30) {
+      const value = toTimeLabel(minute);
+      options.push({ value, label: value });
+    }
+
+    return options;
+  }, [availableSegments, form.startTime]);
+
+  useEffect(() => {
+    if (!form.startTime || endTimeOptions.length === 0) {
+      if (form.endTime) {
+        setForm((prev) => ({ ...prev, endTime: "" }));
+      }
+      return;
+    }
+
+    const isCurrentEndValid = endTimeOptions.some((option) => option.value === form.endTime);
+    if (!isCurrentEndValid) {
+      setForm((prev) => ({ ...prev, endTime: "" }));
+    }
+  }, [form.startTime, form.endTime, endTimeOptions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -221,12 +344,33 @@ function CreateBookingPage() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Start Time</label>
-            <input className="field" name="startTime" type="time" value={form.startTime} onChange={handleChange} required />
+            <StyledSelect
+              className="w-full"
+              name="startTime"
+              value={form.startTime}
+              onChange={handleChange}
+              options={startTimeOptions}
+              placeholder={loadingAvailability ? "Loading available times..." : "Select start time"}
+              disabled={!form.resourceId || !form.date || loadingAvailability || startTimeOptions.length === 0}
+              required
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">End Time</label>
-            <input className="field" name="endTime" type="time" value={form.endTime} onChange={handleChange} required />
+            <StyledSelect
+              className="w-full"
+              name="endTime"
+              value={form.endTime}
+              onChange={handleChange}
+              options={endTimeOptions}
+              placeholder="Select end time"
+              disabled={!form.startTime || endTimeOptions.length === 0}
+              required
+            />
             <p className="mt-1 text-xs text-slate-500">Duration must be between 30 minutes and 4 hours.</p>
+            {form.resourceId && form.date && !loadingAvailability && startTimeOptions.length === 0 && (
+              <p className="mt-1 text-xs text-rose-600">No available times for this resource on the selected date.</p>
+            )}
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-slate-700">Purpose</label>
