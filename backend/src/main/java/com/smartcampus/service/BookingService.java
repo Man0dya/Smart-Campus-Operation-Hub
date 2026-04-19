@@ -1,10 +1,12 @@
 package com.smartcampus.service;
 
 import com.smartcampus.dto.BookingCreateRequest;
+import com.smartcampus.dto.BookingAvailabilityResponse;
 import com.smartcampus.enums.BookingStatus;
 import com.smartcampus.exception.ConflictException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.model.Booking;
+import com.smartcampus.model.Resource;
 import com.smartcampus.repository.BookingRepository;
 import org.springframework.stereotype.Service;
 
@@ -18,15 +20,42 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final NotificationService notificationService;
+    private final ResourceService resourceService;
 
-    public BookingService(BookingRepository bookingRepository, NotificationService notificationService) {
+    public BookingService(BookingRepository bookingRepository,
+                          NotificationService notificationService,
+                          ResourceService resourceService) {
         this.bookingRepository = bookingRepository;
         this.notificationService = notificationService;
+        this.resourceService = resourceService;
     }
 
     public List<Booking> getMyBookings(String userId) {
         return bookingRepository.findByUserId(userId);
     }
+
+        public BookingAvailabilityResponse getAvailability(String resourceId, String date) {
+        Resource resource = resourceService.getResourceById(resourceId);
+        List<BookingAvailabilityResponse.BookingInterval> blockedIntervals = bookingRepository
+            .findByResourceIdAndDate(resourceId, date)
+            .stream()
+            .filter(booking -> booking.getStatus() == BookingStatus.PENDING
+                || booking.getStatus() == BookingStatus.APPROVED)
+            .map(booking -> new BookingAvailabilityResponse.BookingInterval(
+                booking.getStartTime(),
+                booking.getEndTime()
+            ))
+            .sorted((left, right) -> left.startTime().compareTo(right.startTime()))
+            .toList();
+
+        return new BookingAvailabilityResponse(
+            resourceId,
+            date,
+            resource.getAvailabilityStart(),
+            resource.getAvailabilityEnd(),
+            blockedIntervals
+        );
+        }
 
     private boolean isOverlapping(String start1, String end1, String start2, String end2) {
         return start1.compareTo(end2) < 0 && end1.compareTo(start2) > 0;
