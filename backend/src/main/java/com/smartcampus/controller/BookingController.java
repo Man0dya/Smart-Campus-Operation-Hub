@@ -1,6 +1,7 @@
 package com.smartcampus.controller;
 
 import com.smartcampus.dto.BookingCreateRequest;
+import com.smartcampus.dto.BookingAvailabilityResponse;
 import com.smartcampus.dto.BookingDecisionRequest;
 import com.smartcampus.enums.BookingStatus;
 import com.smartcampus.model.Booking;
@@ -32,6 +33,14 @@ public class BookingController {
     public List<Booking> getMyBookings(@AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
         return bookingService.getMyBookings(user.getId());
+    }
+
+    @GetMapping("/availability")
+    public BookingAvailabilityResponse getAvailability(@AuthenticationPrincipal OAuth2User principal,
+                                                       @RequestParam String resourceId,
+                                                       @RequestParam String date) {
+        currentUserService.requireUser(principal);
+        return bookingService.getAvailability(resourceId, date);
     }
 
     @GetMapping
