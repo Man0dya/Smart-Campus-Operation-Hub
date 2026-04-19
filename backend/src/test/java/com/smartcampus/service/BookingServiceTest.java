@@ -29,6 +29,9 @@ class BookingServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private ResourceService resourceService;
+
     @InjectMocks
     private BookingService bookingService;
 
@@ -160,5 +163,35 @@ class BookingServiceTest {
         bookingService.deleteBooking("b1", "admin-1");
 
         verify(bookingRepository).deleteById("b1");
+    }
+
+    @Test
+    void cancelBooking_shouldAllowPendingForOwner() {
+        Booking existing = Booking.builder()
+                .id("b1")
+                .userId("user-1")
+                .status(BookingStatus.PENDING)
+                .build();
+
+        when(bookingRepository.findById("b1")).thenReturn(java.util.Optional.of(existing));
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Booking cancelled = bookingService.cancelBooking("b1", "user-1", false);
+
+        assertEquals(BookingStatus.CANCELLED, cancelled.getStatus());
+        verify(bookingRepository).save(any(Booking.class));
+    }
+
+    @Test
+    void cancelBooking_shouldRejectRejectedStatus() {
+        Booking existing = Booking.builder()
+                .id("b1")
+                .userId("user-1")
+                .status(BookingStatus.REJECTED)
+                .build();
+
+        when(bookingRepository.findById("b1")).thenReturn(java.util.Optional.of(existing));
+
+        assertThrows(ConflictException.class, () -> bookingService.cancelBooking("b1", "user-1", false));
     }
 }
