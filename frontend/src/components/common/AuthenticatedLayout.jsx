@@ -2,7 +2,6 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "r
 import { NavLink, useNavigate } from "react-router-dom";
 import AuthContext from "../../context/auth-context";
 import {
-  clearAllNotifications,
   getNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
@@ -68,6 +67,7 @@ function AuthenticatedLayout({ title, subtitle, children }) {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [dismissedPopupNotificationIds, setDismissedPopupNotificationIds] = useState([]);
   const notificationRef = useRef(null);
 
   const loadNotifications = useCallback(async () => {
@@ -78,7 +78,11 @@ function AuthenticatedLayout({ title, subtitle, children }) {
     setNotificationLoading(true);
     try {
       const res = await getNotifications();
-      setNotifications(res.data || []);
+      const nextNotifications = res.data || [];
+      setNotifications(nextNotifications);
+      setDismissedPopupNotificationIds((prev) =>
+        prev.filter((id) => nextNotifications.some((item) => item.id === id))
+      );
     } catch {
       setNotifications([]);
     } finally {
@@ -109,12 +113,17 @@ function AuthenticatedLayout({ title, subtitle, children }) {
     };
   }, []);
 
-  const unreadCount = useMemo(
-    () => notifications.filter((notification) => !isNotificationRead(notification)).length,
-    [notifications]
+  const popupNotifications = useMemo(
+    () => notifications.filter((notification) => !dismissedPopupNotificationIds.includes(notification.id)),
+    [notifications, dismissedPopupNotificationIds]
   );
 
-  const recentNotifications = useMemo(() => notifications.slice(0, 5), [notifications]);
+  const unreadCount = useMemo(
+    () => popupNotifications.filter((notification) => !isNotificationRead(notification)).length,
+    [popupNotifications]
+  );
+
+  const recentNotifications = useMemo(() => popupNotifications.slice(0, 5), [popupNotifications]);
 
   const handleLogout = () => {
     window.location.href = `${authServerOrigin}/logout`;
@@ -211,16 +220,12 @@ function AuthenticatedLayout({ title, subtitle, children }) {
   };
 
   const handleClearAllNotifications = async () => {
-    if (notifications.length === 0) {
+    if (popupNotifications.length === 0) {
       return;
     }
 
-    try {
-      await clearAllNotifications();
-      setNotifications([]);
-    } catch {
-      // Keep UI usable even if clear-all fails.
-    }
+    const idsToDismiss = popupNotifications.map((notification) => notification.id);
+    setDismissedPopupNotificationIds((prev) => [...new Set([...prev, ...idsToDismiss])]);
   };
 
   const NavItem = ({ to, label, icon: Icon, end = false }) => (
@@ -368,12 +373,12 @@ function AuthenticatedLayout({ title, subtitle, children }) {
                     <button
                       type="button"
                       className={`text-xs font-semibold ${
-                        notifications.length > 0
+                        popupNotifications.length > 0
                           ? "text-rose-700 hover:text-rose-800"
                           : "cursor-not-allowed text-slate-400"
                       }`}
                       onClick={() => void handleClearAllNotifications()}
-                      disabled={notifications.length === 0}
+                      disabled={popupNotifications.length === 0}
                     >
                       Clear all
                     </button>
