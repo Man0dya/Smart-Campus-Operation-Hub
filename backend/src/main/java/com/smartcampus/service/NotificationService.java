@@ -64,4 +64,8 @@ public class NotificationService {
 
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
+
+    public void clearAllForUser(String userId) {
+        notificationRepository.deleteByUserId(userId);
+    }
 }

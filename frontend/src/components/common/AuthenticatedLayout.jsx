@@ -2,6 +2,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "r
 import { NavLink, useNavigate } from "react-router-dom";
 import AuthContext from "../../context/auth-context";
 import {
+  clearAllNotifications,
   getNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
@@ -209,6 +210,19 @@ function AuthenticatedLayout({ title, subtitle, children }) {
     }
   };
 
+  const handleClearAllNotifications = async () => {
+    if (notifications.length === 0) {
+      return;
+    }
+
+    try {
+      await clearAllNotifications();
+      setNotifications([]);
+    } catch {
+      // Keep UI usable even if clear-all fails.
+    }
+  };
+
   const NavItem = ({ to, label, icon: Icon, end = false }) => (
     <NavLink
       to={to}
@@ -350,6 +364,18 @@ function AuthenticatedLayout({ title, subtitle, children }) {
                       disabled={unreadCount === 0}
                     >
                       Mark all as read
+                    </button>
+                    <button
+                      type="button"
+                      className={`text-xs font-semibold ${
+                        notifications.length > 0
+                          ? "text-rose-700 hover:text-rose-800"
+                          : "cursor-not-allowed text-slate-400"
+                      }`}
+                      onClick={() => void handleClearAllNotifications()}
+                      disabled={notifications.length === 0}
+                    >
+                      Clear all
                     </button>
                     <button
                       type="button"

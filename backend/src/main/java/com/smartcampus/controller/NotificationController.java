@@ -6,6 +6,8 @@ import com.smartcampus.service.CurrentUserService;
 import com.smartcampus.service.NotificationService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,5 +44,12 @@ public class NotificationController {
     public List<Notification> markAllAsRead(@AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
         return notificationService.markAllAsRead(user.getId());
+    }
+
+    @DeleteMapping("/clear-all")
+    public ResponseEntity<Void> clearAll(@AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        notificationService.clearAllForUser(user.getId());
+        return ResponseEntity.noContent().build();
     }
 }
