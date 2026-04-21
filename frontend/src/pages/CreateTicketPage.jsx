@@ -1,38 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { createTicket, uploadTicketAttachments } from "../services/ticketApi";
-import { getAllResources } from "../services/resourceApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import StyledSelect from "../components/common/StyledSelect";
 import FloatingToast from "../components/common/FloatingToast";
 
-const resourceCategoryOptions = [
-  { value: "", label: "All Categories" },
-  { value: "LECTURE_HALL", label: "Lecture Hall" },
-  { value: "LAB", label: "Lab" },
-  { value: "MEETING_ROOM", label: "Meeting Room" },
-  { value: "EQUIPMENT", label: "Equipment" },
-];
-
-const issueCategoryOptions = [
-  { value: "ELECTRICAL", label: "Electrical" },
-  { value: "HVAC", label: "HVAC" },
-  { value: "NETWORK", label: "Network" },
-  { value: "PLUMBING", label: "Plumbing" },
-  { value: "CLEANING", label: "Cleaning" },
-  { value: "OTHER", label: "Other" },
-];
-
 function CreateTicketPage() {
   const [form, setForm] = useState({
     resourceId: "",
-    category: "ELECTRICAL",
+    category: "",
     description: "",
     priority: "MEDIUM",
     contactDetails: "",
   });
-  const [resources, setResources] = useState([]);
-  const [selectedResourceCategory, setSelectedResourceCategory] = useState("");
-  const [loadingResources, setLoadingResources] = useState(false);
   const [error, setError] = useState("");
   const [files, setFiles] = useState([]);
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
@@ -46,62 +25,6 @@ function CreateTicketPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  useEffect(() => {
-    const loadResources = async () => {
-      setLoadingResources(true);
-
-      try {
-        const res = await getAllResources({ status: "ACTIVE" });
-        setResources(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        setError(err?.response?.data?.error || "Failed to load resources.");
-      } finally {
-        setLoadingResources(false);
-      }
-    };
-
-    void loadResources();
-  }, []);
-
-  const categoryDropdownOptions = useMemo(() => {
-    const knownTypes = new Set(resourceCategoryOptions.map((option) => option.value));
-    const dynamicTypes = Array.from(
-      new Set(resources.map((resource) => resource.type).filter(Boolean))
-    )
-      .filter((type) => !knownTypes.has(type))
-      .map((type) => ({ value: type, label: type }));
-
-    return [...resourceCategoryOptions, ...dynamicTypes];
-  }, [resources]);
-
-  const filteredResources = useMemo(() => {
-    if (!selectedResourceCategory) {
-      return resources;
-    }
-
-    return resources.filter((resource) => resource.type === selectedResourceCategory);
-  }, [resources, selectedResourceCategory]);
-
-  const resourceOptions = useMemo(
-    () =>
-      filteredResources.map((resource) => ({
-        value: resource.id,
-        label: resource.name || "Unnamed Resource",
-      })),
-    [filteredResources]
-  );
-
-  useEffect(() => {
-    if (!form.resourceId) {
-      return;
-    }
-
-    const stillExists = filteredResources.some((resource) => resource.id === form.resourceId);
-    if (!stillExists) {
-      setForm((prev) => ({ ...prev, resourceId: "" }));
-    }
-  }, [filteredResources, form.resourceId]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -114,10 +37,9 @@ function CreateTicketPage() {
       showToast("Ticket created successfully.");
       setError("");
       setFiles([]);
-      setSelectedResourceCategory("");
       setForm({
         resourceId: "",
-        category: "ELECTRICAL",
+        category: "",
         description: "",
         priority: "MEDIUM",
         contactDetails: "",
@@ -135,40 +57,12 @@ function CreateTicketPage() {
       <section className="panel max-w-3xl">
         <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Resource Category</label>
-            <StyledSelect
-              className="w-full"
-              name="resourceCategory"
-              value={selectedResourceCategory}
-              onChange={(event) => setSelectedResourceCategory(event.target.value)}
-              options={categoryDropdownOptions}
-              disabled={loadingResources}
-            />
+            <label className="mb-1 block text-sm font-medium text-slate-700">Resource ID</label>
+            <input className="field" name="resourceId" value={form.resourceId} onChange={handleChange} placeholder="e.g., projector-12" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Resource</label>
-            <StyledSelect
-              className="w-full"
-              name="resourceId"
-              value={form.resourceId}
-              onChange={handleChange}
-              options={resourceOptions}
-              placeholder={loadingResources ? "Loading resources..." : "Select resource"}
-              searchable
-              searchPlaceholder="Search by resource name"
-              disabled={loadingResources || resourceOptions.length === 0}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Issue Category</label>
-            <StyledSelect
-              className="w-full"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              options={issueCategoryOptions}
-            />
+            <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
+            <input className="field" name="category" value={form.category} onChange={handleChange} placeholder="Electrical, HVAC, Network..." />
           </div>
 
           <div>
