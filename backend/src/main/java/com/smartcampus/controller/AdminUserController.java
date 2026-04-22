@@ -90,6 +90,10 @@ public class AdminUserController {
                 .role(role)
                 .build();
 
+        if (role == Role.TECHNICIAN) {
+            user.setAvailable(true);
+        }
+
         return userRepository.save(user);
     }
 
@@ -122,7 +126,11 @@ public class AdminUserController {
 
         targetUser.setName(name);
         targetUser.setEmail(email);
-        targetUser.setRole(parseRole(request.role()));
+        Role updatedRole = parseRole(request.role());
+        targetUser.setRole(updatedRole);
+        if (updatedRole == Role.TECHNICIAN) {
+            targetUser.setAvailable(true);
+        }
 
         String password = request.password();
         if (password != null && !password.isBlank()) {
@@ -174,6 +182,9 @@ public class AdminUserController {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
 
         targetUser.setRole(targetRole);
+        if (targetRole == Role.TECHNICIAN) {
+            targetUser.setAvailable(true);
+        }
         return userRepository.save(targetUser);
     }
 

@@ -92,13 +92,6 @@ function DashboardPage() {
         to: "/technician/dashboard",
         icon: HiOutlineWrenchScrewdriver,
         tag: "Service",
-      },
-      {
-        title: "All Tickets",
-        desc: "Browse all incident tickets across the system.",
-        to: "/admin/tickets",
-        icon: HiOutlineClipboardDocumentList,
-        tag: "Service",
       }
     );
   }

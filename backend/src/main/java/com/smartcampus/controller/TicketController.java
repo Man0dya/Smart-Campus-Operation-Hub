@@ -65,7 +65,7 @@ public class TicketController {
     @GetMapping("/assigned")
     public List<Ticket> getAssignedTickets(@AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
-        currentUserService.requireAdminOrTechnician(user);
+        currentUserService.requireTechnician(user);
         return ticketService.getAssignedTickets(user.getId());
     }
 
@@ -82,7 +82,7 @@ public class TicketController {
     @GetMapping
     public List<Ticket> getAllTickets(@AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
-        currentUserService.requireAdminOrTechnician(user);
+        currentUserService.requireAdmin(user);
         return ticketService.getAllTickets();
     }
 

@@ -80,7 +80,7 @@ public class SecurityConfig {
                 }
 
                 if (authorities.contains("ROLE_TECHNICIAN")) {
-                        return "/admin/tickets";
+                        return "/technician/dashboard";
                 }
 
                 return "/dashboard";
