@@ -44,6 +44,12 @@ public class CurrentUserService {
         }
     }
 
+    public void requireTechnician(User user) {
+        if (user.getRole() != Role.TECHNICIAN) {
+            throw new ForbiddenOperationException("Technician access is required.");
+        }
+    }
+
     public boolean isAdmin(User user) {
         return user.getRole() == Role.ADMIN;
     }

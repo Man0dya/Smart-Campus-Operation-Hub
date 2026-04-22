@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class TicketService {
@@ -114,6 +116,35 @@ public class TicketService {
 
         Ticket ticket = getTicketById(id);
 
+        if (actor.getRole() == Role.TECHNICIAN) {
+            if (!isAssignedTo(ticket, actor.getId())) {
+                throw new ForbiddenOperationException("Technician can only update tickets assigned to them.");
+            }
+
+            if (!isBlank(assignedTo)) {
+                throw new ForbiddenOperationException("Technician cannot reassign tickets.");
+            }
+
+            if (!(ticket.getStatus() == TicketStatus.IN_PROGRESS && status == TicketStatus.CLOSED)) {
+                throw new ConflictException("Technician can only close an assigned IN_PROGRESS ticket.");
+            }
+        }
+
+        if (actor.getRole() == Role.ADMIN) {
+            if (!isBlank(assignedTo) && status != TicketStatus.IN_PROGRESS) {
+                throw new IllegalArgumentException("Technician assignment is only allowed when status is IN_PROGRESS.");
+            }
+
+            String effectiveAssignedTo = !isBlank(assignedTo) ? assignedTo.trim() : ticket.getAssignedTo();
+            if (status == TicketStatus.IN_PROGRESS && isBlank(effectiveAssignedTo)) {
+                throw new IllegalArgumentException("Admin must assign a technician before moving ticket to IN_PROGRESS.");
+            }
+
+            if (!isBlank(assignedTo)) {
+                validateTechnicianAssignee(assignedTo.trim());
+            }
+        }
+
         if (ticket.getStatus() == status && (assignedTo == null || assignedTo.isBlank())) {
             return ticket;
         }
@@ -129,8 +160,8 @@ public class TicketService {
         TicketStatus previousStatus = ticket.getStatus();
         ticket.setStatus(status);
 
-        if (assignedTo != null && !assignedTo.isBlank()) {
-            ticket.setAssignedTo(assignedTo);
+        if (!isBlank(assignedTo)) {
+            ticket.setAssignedTo(assignedTo.trim());
         }
 
         if (resolutionNotes != null && !resolutionNotes.isBlank()) {
@@ -274,7 +305,18 @@ public class TicketService {
     }
 
     public void ensureTicketAccess(Ticket ticket, User actor, boolean actorIsAdminOrTech) {
-        if (!actorIsAdminOrTech && !ticket.getReportedBy().equals(actor.getId())) {
+        if (actor.getRole() == Role.ADMIN) {
+            return;
+        }
+
+        if (actor.getRole() == Role.TECHNICIAN) {
+            if (!isAssignedTo(ticket, actor.getId())) {
+                throw new ForbiddenOperationException("Technicians can only access tickets assigned to them.");
+            }
+            return;
+        }
+
+        if (!ticket.getReportedBy().equals(actor.getId())) {
             throw new ForbiddenOperationException("You can only access your own tickets.");
         }
     }
@@ -319,7 +361,15 @@ public class TicketService {
     }
 
     public List<User> getAvailableTechnicians() {
-        return userRepository.findByRoleAndAvailableTrue(Role.TECHNICIAN);
+        Set<String> busyTechnicianIds = ticketRepository.findByStatusAndAssignedToIsNotNull(TicketStatus.IN_PROGRESS)
+            .stream()
+            .map(Ticket::getAssignedTo)
+            .filter(assignedUserId -> assignedUserId != null && !assignedUserId.isBlank())
+            .collect(Collectors.toSet());
+
+        return userRepository.findByRole(Role.TECHNICIAN).stream()
+            .filter(technician -> !busyTechnicianIds.contains(technician.getId()))
+            .toList();
     }
 
     private boolean isValidTransition(TicketStatus current, TicketStatus next) {
@@ -329,6 +379,23 @@ public class TicketService {
             case RESOLVED -> next == TicketStatus.CLOSED;
             case CLOSED, REJECTED -> false;
         };
+    }
+
+    private void validateTechnicianAssignee(String assignedToUserId) {
+        User assignee = userRepository.findById(assignedToUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assigned technician not found."));
+
+        if (assignee.getRole() != Role.TECHNICIAN) {
+            throw new IllegalArgumentException("assignedTo must reference a technician user.");
+        }
+    }
+
+    private boolean isAssignedTo(Ticket ticket, String userId) {
+        return ticket.getAssignedTo() != null && ticket.getAssignedTo().equals(userId);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**

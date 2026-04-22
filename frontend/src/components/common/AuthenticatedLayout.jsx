@@ -35,7 +35,6 @@ const userNavItems = [
 
 const technicianNavItems = [
   { to: "/technician/dashboard", label: "Dashboard", icon: HiOutlineHome, end: true },
-  { to: "/admin/tickets", label: "Ticket Command", icon: HiOutlineWrenchScrewdriver, end: true },
   { to: "/notifications", label: "Notifications", icon: HiOutlineBell, end: true },
 ];
 
@@ -175,8 +174,11 @@ function AuthenticatedLayout({ title, subtitle, children }) {
       if (ticketId) {
         return `/tickets/${ticketId}`;
       }
-      if (user?.role === "ADMIN" || user?.role === "TECHNICIAN") {
+      if (user?.role === "ADMIN") {
         return "/admin/tickets";
+      }
+      if (user?.role === "TECHNICIAN") {
+        return "/technician/dashboard";
       }
       return "/notifications";
     }

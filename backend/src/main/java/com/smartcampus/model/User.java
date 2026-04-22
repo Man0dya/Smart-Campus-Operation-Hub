@@ -24,5 +24,6 @@ public class User {
     private String passwordHash;
     private String profilePicture;
     private Role role;
+    @Builder.Default
     private boolean available = true;
 }

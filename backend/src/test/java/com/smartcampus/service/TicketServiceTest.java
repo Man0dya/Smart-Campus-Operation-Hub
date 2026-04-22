@@ -18,9 +18,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -92,6 +94,58 @@ class TicketServiceTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 ticketService.updateTicketStatus("t1", TicketStatus.REJECTED, null, "", actor, true));
+    }
+
+    @Test
+    void updateTicketStatus_shouldRequireAssigneeWhenAdminMovesToInProgress() {
+        User actor = User.builder().id("admin-1").role(Role.ADMIN).build();
+        Ticket ticket = Ticket.builder()
+                .id("t1")
+                .reportedBy("user-1")
+                .status(TicketStatus.OPEN)
+                .build();
+
+        when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                ticketService.updateTicketStatus("t1", TicketStatus.IN_PROGRESS, null, null, actor, true));
+    }
+
+    @Test
+    void updateTicketStatus_shouldRejectTechnicianWhenTicketNotAssignedToThem() {
+        User actor = User.builder().id("tech-1").role(Role.TECHNICIAN).build();
+        Ticket ticket = Ticket.builder()
+                .id("t1")
+                .reportedBy("user-1")
+                .assignedTo("tech-2")
+                .status(TicketStatus.IN_PROGRESS)
+                .build();
+
+        when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
+
+        assertThrows(ForbiddenOperationException.class, () ->
+                ticketService.updateTicketStatus("t1", TicketStatus.CLOSED, null, "done", actor, true));
+    }
+
+    @Test
+    void getAvailableTechnicians_shouldExcludeOnlyTechniciansWithInProgressAssignments() {
+        User availableTech = User.builder().id("tech-1").role(Role.TECHNICIAN).build();
+        User busyTech = User.builder().id("tech-2").role(Role.TECHNICIAN).build();
+
+        Ticket inProgressTicket = Ticket.builder()
+                .id("t1")
+                .status(TicketStatus.IN_PROGRESS)
+                .assignedTo("tech-2")
+                .build();
+
+        when(ticketRepository.findByStatusAndAssignedToIsNotNull(TicketStatus.IN_PROGRESS))
+                .thenReturn(List.of(inProgressTicket));
+        when(userRepository.findByRole(Role.TECHNICIAN)).thenReturn(List.of(availableTech, busyTech));
+
+        List<User> technicians = ticketService.getAvailableTechnicians();
+
+        assertEquals(1, technicians.size());
+        assertIterableEquals(List.of("tech-1"), technicians.stream().map(User::getId).toList());
     }
 
     @Test

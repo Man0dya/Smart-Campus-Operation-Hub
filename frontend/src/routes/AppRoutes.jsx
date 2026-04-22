@@ -134,7 +134,7 @@ function AppRoutes() {
           path="/admin/tickets"
           element={
             <ProtectedRoute>
-              <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
+              <RoleRoute allowedRoles={["ADMIN"]}>
                 <AdminTicketsPage />
               </RoleRoute>
             </ProtectedRoute>
