@@ -100,6 +100,7 @@ public class BookingService {
                 .expectedAttendees(request.expectedAttendees())
                 .status(BookingStatus.PENDING)
                 .adminReason(null)
+            .cancelReason(null)
                 .build();
 
         ensureNoConflicts(booking, null);
@@ -134,6 +135,10 @@ public class BookingService {
     }
 
     public Booking cancelBooking(String bookingId, String requesterUserId, boolean isAdmin) {
+        return cancelBooking(bookingId, requesterUserId, isAdmin, null);
+    }
+
+    public Booking cancelBooking(String bookingId, String requesterUserId, boolean isAdmin, String cancelReason) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
 
@@ -146,6 +151,7 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancelReason(cancelReason == null || cancelReason.isBlank() ? null : cancelReason.trim());
         booking.setUpdatedAt(Instant.now().toString());
         booking.setStatusChangedAt(Instant.now().toString());
         booking.setStatusChangedBy(requesterUserId);

@@ -9,5 +9,6 @@ export const approveBooking = (id, reason) =>
   api.patch(`/bookings/${id}/approve`, reason ? { reason } : {});
 export const rejectBooking = (id, reason) =>
   api.patch(`/bookings/${id}/reject`, reason ? { reason } : {});
-export const cancelBooking = (id) => api.patch(`/bookings/${id}/cancel`);
+export const cancelBooking = (id, reason) =>
+  api.patch(`/bookings/${id}/cancel`, reason ? { reason } : {});
 export const deleteAdminBooking = (id) => api.delete(`/bookings/${id}`);

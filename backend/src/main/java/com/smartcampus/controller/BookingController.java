@@ -83,10 +83,12 @@ public class BookingController {
 
     @PatchMapping("/{id}/cancel")
     public Booking cancelBooking(@PathVariable String id,
+                                 @RequestBody(required = false) @Valid BookingDecisionRequest request,
                                  @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
         boolean isAdmin = currentUserService.isAdmin(user);
-        return bookingService.cancelBooking(id, user.getId(), isAdmin);
+        String reason = request == null ? null : request.reason();
+        return bookingService.cancelBooking(id, user.getId(), isAdmin, reason);
     }
 
     @DeleteMapping("/{id}")
