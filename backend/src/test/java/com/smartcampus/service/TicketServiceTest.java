@@ -8,7 +8,9 @@ import com.smartcampus.exception.ConflictException;
 import com.smartcampus.exception.ForbiddenOperationException;
 import com.smartcampus.model.Ticket;
 import com.smartcampus.model.User;
+import com.smartcampus.repository.CommentRepository;
 import com.smartcampus.repository.TicketRepository;
+import com.smartcampus.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,8 +34,14 @@ class TicketServiceTest {
     @Mock
     private NotificationService notificationService;
 
-        @Mock
-        private TicketAttachmentStorageService ticketAttachmentStorageService;
+    @Mock
+    private CommentRepository commentRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private TicketAttachmentStorageService ticketAttachmentStorageService;
 
     @InjectMocks
     private TicketService ticketService;
