@@ -86,7 +86,7 @@ function LoginPage() {
 
   const routeByRole = (role) => {
     if (role === "ADMIN") return "/admin";
-    if (role === "TECHNICIAN") return "/admin/tickets";
+    if (role === "TECHNICIAN") return "/technician/dashboard";
     return "/dashboard";
   };
 

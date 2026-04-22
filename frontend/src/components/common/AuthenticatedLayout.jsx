@@ -33,6 +33,12 @@ const userNavItems = [
   { to: "/notifications", label: "Notifications", icon: HiOutlineBell, end: true },
 ];
 
+const technicianNavItems = [
+  { to: "/technician/dashboard", label: "Dashboard", icon: HiOutlineHome, end: true },
+  { to: "/admin/tickets", label: "Ticket Command", icon: HiOutlineWrenchScrewdriver, end: true },
+  { to: "/notifications", label: "Notifications", icon: HiOutlineBell, end: true },
+];
+
 const adminNavItems = [
   { to: "/admin", label: "Admin Hub", icon: HiOutlineShieldCheck, end: true },
   { to: "/bookings/admin", label: "Bookings", icon: HiOutlineClipboardDocumentList, end: true },
@@ -69,6 +75,12 @@ function AuthenticatedLayout({ title, subtitle, children }) {
   const [notifications, setNotifications] = useState([]);
   const [dismissedPopupNotificationIds, setDismissedPopupNotificationIds] = useState([]);
   const notificationRef = useRef(null);
+
+  const sidebarNavItems = useMemo(() => {
+    if (user?.role === "ADMIN") return adminNavItems;
+    if (user?.role === "TECHNICIAN") return technicianNavItems;
+    return userNavItems;
+  }, [user?.role]);
 
   const loadNotifications = useCallback(async () => {
     if (!user) {
@@ -228,7 +240,7 @@ function AuthenticatedLayout({ title, subtitle, children }) {
     setDismissedPopupNotificationIds((prev) => [...new Set([...prev, ...idsToDismiss])]);
   };
 
-  const NavItem = ({ to, label, icon: Icon, end = false }) => (
+  const NavItem = ({ to, label, icon, end = false }) => (
     <NavLink
       to={to}
       end={end}
@@ -241,7 +253,7 @@ function AuthenticatedLayout({ title, subtitle, children }) {
         }`
       }
     >
-      <Icon className="h-5 w-5" />
+      {icon({ className: "h-5 w-5" })}
       {label}
     </NavLink>
   );
@@ -281,25 +293,10 @@ function AuthenticatedLayout({ title, subtitle, children }) {
             <div className="mb-2 px-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
               Menu
             </div>
-            {user?.role === "ADMIN" ? (
-              adminNavItems.map((item) => (
-                <NavItem key={item.to} {...item} />
-              ))
-            ) : (
-              userNavItems.map((item) => (
-                <NavItem key={item.to} {...item} />
-              ))
-            )}
+            {sidebarNavItems.map((item) => (
+              <NavItem key={item.to} {...item} />
+            ))}
           </div>
-
-          {user?.role === "TECHNICIAN" && (
-            <div className="mt-8 space-y-1">
-              <div className="mb-2 px-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Service Desk
-              </div>
-              <NavItem to="/admin/tickets" label="Ticket Command" icon={HiOutlineWrenchScrewdriver} end={true} />
-            </div>
-          )}
         </div>
 
         <div className="border-t border-slate-200 p-4">
