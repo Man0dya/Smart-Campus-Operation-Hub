@@ -26,15 +26,18 @@ public class TicketService {
     private final NotificationService notificationService;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final TicketAttachmentStorageService ticketAttachmentStorageService;
 
     public TicketService(TicketRepository ticketRepository,
                          NotificationService notificationService,
                          CommentRepository commentRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         TicketAttachmentStorageService ticketAttachmentStorageService) {
         this.ticketRepository = ticketRepository;
         this.notificationService = notificationService;
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
+        this.ticketAttachmentStorageService = ticketAttachmentStorageService;
     }
 
     public Ticket createTicket(TicketCreateRequest request, String reporterUserId) {
@@ -300,10 +303,8 @@ public class TicketService {
 
         Ticket ticket = getTicketById(ticketId);
 
-        // Free up technician if one was assigned
-        if (ticket.getAssignedTo() != null && !ticket.getAssignedTo().isBlank()) {
-            setTechnicianAvailability(ticket.getAssignedTo(), true);
-        }
+        // Best-effort cleanup for Cloudinary-backed attachments.
+        ticketAttachmentStorageService.deleteAttachments(ticket.getAttachments());
 
         ticketRepository.deleteById(ticketId);
 
@@ -373,6 +374,9 @@ public class TicketService {
      */
     private void notifyAllAdmins(String title, String message, String type) {
         List<User> admins = userRepository.findByRole(Role.ADMIN);
+        if (admins == null || admins.isEmpty()) {
+            return;
+        }
         for (User admin : admins) {
             notificationService.createNotification(admin.getId(), title, message, type);
         }

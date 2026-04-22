@@ -14,4 +14,5 @@ import lombok.Setter;
 public class Attachment {
     private String fileName;
     private String fileUrl;
+    private String publicId;
 }

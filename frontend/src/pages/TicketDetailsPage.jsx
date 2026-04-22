@@ -166,9 +166,18 @@ function TicketDetailsPage() {
               <p className="mb-1 text-sm font-medium text-slate-800">Attachments</p>
               <ul className="list-inside list-disc space-y-1 text-sm text-cyan-700">
                 {ticket.attachments.map((attachment) => (
-                  <li key={attachment.fileName}>
-                    <a href={`${apiOrigin}${attachment.fileUrl}`} target="_blank" rel="noreferrer" className="hover:underline">
-                      {attachment.fileName}
+                  <li key={attachment.publicId ?? attachment.fileUrl ?? attachment.fileName}>
+                    <a
+                      href={
+                        attachment.fileUrl?.startsWith("http")
+                          ? attachment.fileUrl
+                          : `${apiOrigin}${attachment.fileUrl}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline"
+                    >
+                      {attachment.fileName ?? "Attachment"}
                     </a>
                   </li>
                 ))}
