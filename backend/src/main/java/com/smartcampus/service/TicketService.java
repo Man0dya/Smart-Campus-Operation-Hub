@@ -181,6 +181,53 @@ public class TicketService {
         return saved;
     }
 
+    public Ticket cancelTicket(String ticketId, User actor) {
+        if (actor == null) {
+            throw new ForbiddenOperationException("Authentication required.");
+        }
+
+        if (actor.getRole() == Role.TECHNICIAN) {
+            throw new ForbiddenOperationException("Technicians cannot cancel tickets.");
+        }
+
+        Ticket ticket = getTicketById(ticketId);
+
+        boolean actorIsAdminOrTech = actor.getRole() == Role.ADMIN || actor.getRole() == Role.TECHNICIAN;
+        ensureTicketAccess(ticket, actor, actorIsAdminOrTech);
+
+        if (ticket.getStatus() != TicketStatus.OPEN) {
+            throw new ConflictException("Only OPEN tickets can be cancelled.");
+        }
+
+        TicketStatus previousStatus = ticket.getStatus();
+        ticket.setStatus(TicketStatus.CANCELLED);
+
+        String now = Instant.now().toString();
+        ticket.setUpdatedAt(now);
+        ticket.setStatusChangedAt(now);
+        ticket.setStatusChangedBy(actor.getId());
+
+        Ticket saved = ticketRepository.save(ticket);
+
+        String actorName = actor.getName() != null ? actor.getName() : actor.getEmail();
+        String ticketRef = "#" + saved.getId();
+
+        createSystemComment(saved.getId(), "SYSTEM",
+                "\u26D4 Ticket cancelled by " + actorName + ".");
+
+        notifyAllAdmins("Ticket Cancelled",
+                "Ticket " + ticketRef + " was cancelled by the reporter.",
+                "TICKET");
+
+        // Keep side-effects predictable: do not route through workflow transition handler.
+        // This is a reporter-driven action, not part of admin/technician lifecycle updates.
+        if (previousStatus == TicketStatus.IN_PROGRESS && saved.getAssignedTo() != null) {
+            setTechnicianAvailability(saved.getAssignedTo(), true);
+        }
+
+        return saved;
+    }
+
     /**
      * Central handler for all side-effects of ticket status transitions:
      * notifications to all relevant parties and system comments on the ticket thread.
@@ -377,7 +424,7 @@ public class TicketService {
             case OPEN -> next == TicketStatus.IN_PROGRESS || next == TicketStatus.REJECTED;
             case IN_PROGRESS -> next == TicketStatus.CLOSED || next == TicketStatus.REJECTED;
             case RESOLVED -> next == TicketStatus.CLOSED;
-            case CLOSED, REJECTED -> false;
+            case CLOSED, REJECTED, CANCELLED -> false;
         };
     }
 

@@ -113,6 +113,13 @@ public class TicketController {
         );
     }
 
+    @PatchMapping("/{id}/cancel")
+    public Ticket cancelTicket(@PathVariable String id,
+                               @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        return ticketService.cancelTicket(id, user);
+    }
+
     @PostMapping(path = "/{id}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Ticket uploadAttachments(@PathVariable String id,
                                     @RequestParam("files") MultipartFile[] files,
