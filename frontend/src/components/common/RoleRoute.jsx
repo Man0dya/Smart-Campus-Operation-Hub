@@ -21,7 +21,7 @@ function RoleRoute({ children, allowedRoles = [] }) {
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     if (user.role === "ADMIN") return <Navigate to="/admin" replace />;
-    if (user.role === "TECHNICIAN") return <Navigate to="/admin/tickets" replace />;
+    if (user.role === "TECHNICIAN") return <Navigate to="/technician/dashboard" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
