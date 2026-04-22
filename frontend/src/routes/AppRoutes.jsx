@@ -7,6 +7,7 @@ import MyBookingsPage from "../pages/MyBookingsPage";
 import AdminBookingsPage from "../pages/AdminBookingsPage";
 import CreateTicketPage from "../pages/CreateTicketPage";
 import TicketDetailsPage from "../pages/TicketDetailsPage";
+import MyTicketsPage from "../pages/MyTicketsPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import ProfilePage from "../pages/ProfilePage";
 import AdminDashboardPage from "../pages/AdminDashboardPage";
@@ -77,6 +78,15 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <CreateTicketPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tickets/my"
+          element={
+            <ProtectedRoute>
+              <MyTicketsPage />
             </ProtectedRoute>
           }
         />

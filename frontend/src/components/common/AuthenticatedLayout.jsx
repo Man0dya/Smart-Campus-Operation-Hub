@@ -30,6 +30,7 @@ const userNavItems = [
   { to: "/bookings/create", label: "Book Resource", icon: HiOutlineCalendarDays, end: true },
   { to: "/bookings/my", label: "My Bookings", icon: HiOutlineBookmarkSquare, end: true },
   { to: "/tickets/create", label: "Report Issue", icon: HiOutlineExclamationTriangle, end: true },
+  { to: "/tickets/my", label: "My Tickets", icon: HiOutlineWrenchScrewdriver, end: true },
   { to: "/notifications", label: "Notifications", icon: HiOutlineBell, end: true },
 ];
 
