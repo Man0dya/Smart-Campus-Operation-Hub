@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
-import { deleteAdminTicket, getAllTickets, updateTicketStatus } from "../services/ticketApi";
+import { deleteAdminTicket, getAllTickets, updateTicketStatus, getAvailableTechnicians } from "../services/ticketApi";
 import {
   HiOutlinePencilSquare,
   HiOutlineEye,
@@ -48,6 +48,9 @@ function AdminTicketsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Available technicians for assignment dropdown
+  const [availableTechnicians, setAvailableTechnicians] = useState([]);
+
   const loadTickets = useCallback(async () => {
     try {
       const res = await getAllTickets();
@@ -72,12 +75,24 @@ function AdminTicketsPage() {
     }
   }, []);
 
+  const loadTechnicians = useCallback(async () => {
+    // Only admin can fetch available technicians
+    if (user?.role !== "ADMIN") return;
+    try {
+      const res = await getAvailableTechnicians();
+      setAvailableTechnicians(res.data || []);
+    } catch {
+      // Non-critical, silently fail
+    }
+  }, [user?.role]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       void loadTickets();
+      void loadTechnicians();
     }, 0);
     return () => clearTimeout(timer);
-  }, [loadTickets]);
+  }, [loadTickets, loadTechnicians]);
 
   const filteredTickets = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -139,6 +154,8 @@ function AdminTicketsPage() {
   const openEditor = (ticketId) => {
     setActiveTicketId(ticketId);
     setDrawerOpen(true);
+    // Refresh available technicians when opening the editor
+    void loadTechnicians();
   };
 
   const closeEditor = () => {
@@ -170,6 +187,8 @@ function AdminTicketsPage() {
       setError("");
       setDrawerOpen(false);
       await loadTickets();
+      // Refresh technician list after assignment
+      await loadTechnicians();
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to update ticket.");
     }
@@ -212,6 +231,27 @@ function AdminTicketsPage() {
     [tickets, activeTicketId]
   );
 
+  // Build technician dropdown options
+  const technicianOptions = useMemo(() => {
+    const options = [{ value: "", label: "— Select Technician —" }];
+
+    availableTechnicians.forEach((tech) => {
+      const label = tech.name
+        ? `${tech.name} (${tech.email || "no email"})`
+        : tech.email || tech.id;
+      options.push({ value: tech.id, label });
+    });
+
+    // If the ticket already has an assigned tech who is NOT in the available list,
+    // keep them as an option so the dropdown shows the current value
+    const currentAssigned = drafts[activeTicketId]?.assignedTo;
+    if (currentAssigned && !availableTechnicians.some((t) => t.id === currentAssigned)) {
+      options.push({ value: currentAssigned, label: `${currentAssigned} (currently assigned)` });
+    }
+
+    return options;
+  }, [availableTechnicians, activeTicketId, drafts]);
+
   return (
     <AuthenticatedLayout
       title="Admin Ticket Command Center"
@@ -234,7 +274,6 @@ function AdminTicketsPage() {
             { value: "ALL", label: "ALL" },
             { value: "OPEN", label: "OPEN" },
             { value: "IN_PROGRESS", label: "IN_PROGRESS" },
-            { value: "RESOLVED", label: "RESOLVED" },
             { value: "CLOSED", label: "CLOSED" },
             { value: "REJECTED", label: "REJECTED" },
           ]}
@@ -375,7 +414,6 @@ function AdminTicketsPage() {
               options={[
                 { value: "OPEN", label: "OPEN" },
                 { value: "IN_PROGRESS", label: "IN_PROGRESS" },
-                { value: "RESOLVED", label: "RESOLVED" },
                 { value: "CLOSED", label: "CLOSED" },
                 { value: "REJECTED", label: "REJECTED" },
               ]}
@@ -383,13 +421,35 @@ function AdminTicketsPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Assigned To</label>
-            <input
-              className="field"
-              placeholder="Assigned to"
-              value={drafts[activeTicketId]?.assignedTo || ""}
-              onChange={(e) => setDraft(activeTicketId, "assignedTo", e.target.value)}
-            />
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Assign Technician
+              {availableTechnicians.length > 0 && (
+                <span className="ml-2 text-xs font-normal text-emerald-600">
+                  ({availableTechnicians.length} available)
+                </span>
+              )}
+            </label>
+            {user?.role === "ADMIN" ? (
+              <StyledSelect
+                name="assignedTo"
+                value={drafts[activeTicketId]?.assignedTo || ""}
+                onChange={(e) => setDraft(activeTicketId, "assignedTo", e.target.value)}
+                options={technicianOptions}
+              />
+            ) : (
+              <input
+                className="field"
+                placeholder="Assigned to"
+                value={drafts[activeTicketId]?.assignedTo || ""}
+                onChange={(e) => setDraft(activeTicketId, "assignedTo", e.target.value)}
+                disabled
+              />
+            )}
+            {user?.role === "ADMIN" && availableTechnicians.length === 0 && (
+              <p className="mt-1 text-xs text-amber-600">
+                No technicians are currently available. They may be assigned to other tickets.
+              </p>
+            )}
           </div>
 
           <div>

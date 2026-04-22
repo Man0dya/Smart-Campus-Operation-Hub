@@ -8,6 +8,10 @@ export const updateTicketStatus = (id, payload) =>
   api.patch(`/tickets/${id}/status`, payload);
 export const deleteAdminTicket = (id) => api.delete(`/tickets/${id}`);
 
+export const getAssignedTickets = () => api.get("/tickets/assigned");
+export const getAvailableTechnicians = () =>
+  api.get("/tickets/available-technicians");
+
 export const uploadTicketAttachments = (id, files) => {
   const formData = new FormData();
   Array.from(files).forEach((file) => formData.append("files", file));

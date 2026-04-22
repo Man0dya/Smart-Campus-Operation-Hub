@@ -13,6 +13,7 @@ import AdminDashboardPage from "../pages/AdminDashboardPage";
 import AdminResourcesPage from "../pages/AdminResourcesPage";
 import AdminTicketsPage from "../pages/AdminTicketsPage";
 import AdminUsersPage from "../pages/AdminUsersPage";
+import TechnicianDashboardPage from "../pages/TechnicianDashboardPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import RoleRoute from "../components/common/RoleRoute";
 
@@ -135,6 +136,17 @@ function AppRoutes() {
             <ProtectedRoute>
               <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
                 <AdminTicketsPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/technician/dashboard"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={["TECHNICIAN"]}>
+                <TechnicianDashboardPage />
               </RoleRoute>
             </ProtectedRoute>
           }

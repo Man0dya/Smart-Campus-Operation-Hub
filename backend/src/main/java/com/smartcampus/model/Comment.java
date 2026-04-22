@@ -24,4 +24,5 @@ public class Comment {
     private String message;
     private String createdAt;
     private String updatedAt;
+    private boolean systemGenerated;
 }

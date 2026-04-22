@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface TicketRepository extends MongoRepository<Ticket, String> {
     List<Ticket> findByReportedBy(String reportedBy);
+    List<Ticket> findByAssignedTo(String assignedTo);
 }
