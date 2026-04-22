@@ -33,6 +33,7 @@ function CreateTicketPage() {
   const [resources, setResources] = useState([]);
   const [selectedResourceCategory, setSelectedResourceCategory] = useState("");
   const [loadingResources, setLoadingResources] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [files, setFiles] = useState([]);
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
@@ -104,6 +105,13 @@ function CreateTicketPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (submitting) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
     try {
       const ticketRes = await createTicket(form);
 
@@ -124,6 +132,8 @@ function CreateTicketPage() {
       });
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to create ticket.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -133,7 +143,7 @@ function CreateTicketPage() {
       subtitle="Report maintenance issues and upload evidence for faster resolution"
     >
       <section className="panel max-w-3xl">
-        <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2" aria-busy={submitting}>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Resource Category</label>
             <StyledSelect
@@ -229,7 +239,19 @@ function CreateTicketPage() {
           </div>
 
           <div className="sm:col-span-2">
-            <button className="btn-primary" type="submit">Submit Ticket</button>
+            <button
+              className={`btn-primary gap-2 ${submitting ? "cursor-not-allowed opacity-80" : ""}`}
+              type="submit"
+              disabled={submitting}
+            >
+              {submitting && (
+                <span
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  aria-hidden="true"
+                />
+              )}
+              {submitting ? "Submitting..." : "Submit Ticket"}
+            </button>
           </div>
         </form>
       </section>
