@@ -106,17 +106,14 @@ public class TicketController {
             throw new IllegalArgumentException("At least one attachment is required.");
         }
 
-        List<String> storedFileNames = ticketAttachmentStorageService.storeTicketImages(files);
-        List<Attachment> attachments = storedFileNames.stream()
-                .map(fileName -> Attachment.builder()
-                        .fileName(fileName)
-                        .fileUrl("/api/tickets/attachments/" + fileName)
-                        .build())
-                .toList();
+        List<Attachment> attachments = ticketAttachmentStorageService.storeTicketImages(files);
 
         return ticketService.addAttachments(id, attachments);
     }
 
+    /**
+     * Legacy fallback for tickets created before Cloudinary storage.
+     */
     @GetMapping("/attachments/{fileName:.+}")
     public ResponseEntity<Resource> getAttachment(@PathVariable String fileName) {
         Resource file = ticketAttachmentStorageService.loadAsResource(fileName);

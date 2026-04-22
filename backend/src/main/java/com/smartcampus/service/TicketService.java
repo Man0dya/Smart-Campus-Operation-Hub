@@ -21,10 +21,14 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final NotificationService notificationService;
+    private final TicketAttachmentStorageService ticketAttachmentStorageService;
 
-    public TicketService(TicketRepository ticketRepository, NotificationService notificationService) {
+    public TicketService(TicketRepository ticketRepository,
+                         NotificationService notificationService,
+                         TicketAttachmentStorageService ticketAttachmentStorageService) {
         this.ticketRepository = ticketRepository;
         this.notificationService = notificationService;
+        this.ticketAttachmentStorageService = ticketAttachmentStorageService;
     }
 
     public Ticket createTicket(TicketCreateRequest request, String reporterUserId) {
@@ -135,6 +139,10 @@ public class TicketService {
         }
 
         Ticket ticket = getTicketById(ticketId);
+
+        // Best-effort cleanup of attachments stored in Cloudinary.
+        ticketAttachmentStorageService.deleteAttachments(ticket.getAttachments());
+
         ticketRepository.deleteById(ticketId);
 
         if (!ticket.getReportedBy().equals(actor.getId())) {

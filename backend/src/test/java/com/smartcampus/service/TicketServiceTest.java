@@ -32,6 +32,9 @@ class TicketServiceTest {
     @Mock
     private NotificationService notificationService;
 
+        @Mock
+        private TicketAttachmentStorageService ticketAttachmentStorageService;
+
     @InjectMocks
     private TicketService ticketService;
 
@@ -83,27 +86,28 @@ class TicketServiceTest {
                 ticketService.updateTicketStatus("t1", TicketStatus.REJECTED, null, "", actor, true));
     }
 
-        @Test
-        void deleteTicket_shouldRejectNonAdmin() {
-                User actor = User.builder().id("user-1").role(Role.USER).build();
+    @Test
+    void deleteTicket_shouldRejectNonAdmin() {
+        User actor = User.builder().id("user-1").role(Role.USER).build();
 
-                assertThrows(ForbiddenOperationException.class, () ->
-                                ticketService.deleteTicket("t1", actor));
-        }
+        assertThrows(ForbiddenOperationException.class, () ->
+                ticketService.deleteTicket("t1", actor));
+    }
 
-        @Test
-        void deleteTicket_shouldDeleteWhenActorIsAdmin() {
-                User actor = User.builder().id("admin-1").role(Role.ADMIN).build();
-                Ticket ticket = Ticket.builder()
-                                .id("t1")
-                                .reportedBy("user-1")
-                                .status(TicketStatus.OPEN)
-                                .build();
+    @Test
+    void deleteTicket_shouldDeleteWhenActorIsAdmin() {
+        User actor = User.builder().id("admin-1").role(Role.ADMIN).build();
+        Ticket ticket = Ticket.builder()
+                .id("t1")
+                .reportedBy("user-1")
+                .status(TicketStatus.OPEN)
+                .build();
 
-                when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
+        when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
 
-                ticketService.deleteTicket("t1", actor);
+        ticketService.deleteTicket("t1", actor);
 
-                verify(ticketRepository).deleteById("t1");
-        }
+        verify(ticketAttachmentStorageService).deleteAttachments(ticket.getAttachments());
+        verify(ticketRepository).deleteById("t1");
+    }
 }
