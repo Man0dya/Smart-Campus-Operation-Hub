@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   createComment,
@@ -9,6 +9,12 @@ import {
 } from "../services/ticketApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import PaginationControls from "../components/common/PaginationControls";
+import AuthContext from "../context/auth-context";
+import {
+  HiOutlineCog6Tooth,
+  HiOutlinePencilSquare,
+  HiOutlineTrash,
+} from "react-icons/hi2";
 
 const apiOrigin = import.meta.env.VITE_API_ORIGIN || "http://localhost:8080";
 
@@ -28,8 +34,25 @@ const getTicketStatusClass = (status) => {
   return "chip-neutral";
 };
 
+const formatTimestamp = (ts) => {
+  if (!ts) return "";
+  try {
+    const date = new Date(ts);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return ts;
+  }
+};
+
 function TicketDetailsPage() {
   const { id } = useParams();
+  const { user } = useContext(AuthContext);
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -37,7 +60,7 @@ function TicketDetailsPage() {
   const [error, setError] = useState("");
   const [commentFilter, setCommentFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadData = useCallback(async () => {
     try {
@@ -128,7 +151,14 @@ function TicketDetailsPage() {
             <h2 className="text-xl font-bold text-slate-900">Ticket #{ticket.id}</h2>
             <span className={`chip ${getTicketStatusClass(ticket.status)}`}>{ticket.status}</span>
           </div>
-          <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Priority:</span> {ticket.priority}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Priority:</span> {ticket.priority}</p>
+            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Category:</span> {ticket.category || "N/A"}</p>
+            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Reporter:</span> {ticket.reportedBy || "Unknown"}</p>
+            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Assigned To:</span> {ticket.assignedTo || "Unassigned"}</p>
+            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Created:</span> {formatTimestamp(ticket.createdAt)}</p>
+            <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Last Updated:</span> {formatTimestamp(ticket.updatedAt)}</p>
+          </div>
           <p className="text-sm text-slate-600"><span className="font-medium text-slate-800">Description:</span> {ticket.description}</p>
 
           {ticket.attachments?.length > 0 && (
@@ -163,8 +193,9 @@ function TicketDetailsPage() {
         </section>
       )}
 
+      {/* Comments / Ticket Thread */}
       <section className="panel mb-4">
-        <h3 className="mb-3 text-lg font-bold text-slate-900">Comments</h3>
+        <h3 className="mb-3 text-lg font-bold text-slate-900">Ticket Thread</h3>
         <div className="mb-3">
           <input
             className="field"
@@ -175,26 +206,67 @@ function TicketDetailsPage() {
         </div>
         <div className="grid gap-3">
           {filteredComments.length === 0 && <p className="text-sm text-slate-500">No comments yet.</p>}
-          {paginatedComments.map((comment) => (
-            <article key={comment.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-sm text-slate-700">{comment.message}</p>
-              <small className="text-xs text-slate-500">{comment.createdAt}</small>
-              <div className="mt-2 flex gap-2">
-                <button
-                  className="btn-secondary"
-                  onClick={() => {
-                    setCommentText(comment.message);
-                    setEditingCommentId(comment.id);
-                  }}
+          {paginatedComments.map((comment) => {
+            const isSystem = comment.systemGenerated;
+            const isOwn = comment.userId === user?.id;
+
+            if (isSystem) {
+              // System-generated comment: distinct styling, no edit/delete
+              return (
+                <article
+                  key={comment.id}
+                  className="flex items-start gap-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-slate-50 p-3"
                 >
-                  Edit
-                </button>
-                <button className="btn-secondary" onClick={() => handleDeleteComment(comment.id)}>
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                    <HiOutlineCog6Tooth className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">System</p>
+                    <p className="mt-0.5 text-sm text-slate-700">{comment.message}</p>
+                    <small className="text-xs text-slate-400">{formatTimestamp(comment.createdAt)}</small>
+                  </div>
+                </article>
+              );
+            }
+
+            // Human comment: regular styling with edit/delete for own comments
+            return (
+              <article key={comment.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-600">
+                    {comment.userId === user?.id ? "You" : comment.userId}
+                  </span>
+                  <span className="text-xs text-slate-400">•</span>
+                  <small className="text-xs text-slate-400">{formatTimestamp(comment.createdAt)}</small>
+                  {comment.updatedAt && comment.updatedAt !== comment.createdAt && (
+                    <span className="text-xs italic text-slate-400">(edited)</span>
+                  )}
+                </div>
+                <p className="text-sm text-slate-700">{comment.message}</p>
+                {isOwn && (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 transition hover:bg-slate-100"
+                      onClick={() => {
+                        setCommentText(comment.message);
+                        setEditingCommentId(comment.id);
+                      }}
+                    >
+                      <HiOutlinePencilSquare className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 transition hover:bg-rose-50 hover:text-rose-700"
+                      onClick={() => handleDeleteComment(comment.id)}
+                    >
+                      <HiOutlineTrash className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
 
         {filteredComments.length > 0 && (
@@ -211,6 +283,7 @@ function TicketDetailsPage() {
         )}
       </section>
 
+      {/* Add Comment Form */}
       <section className="panel max-w-2xl">
         <h3 className="mb-3 text-base font-semibold text-slate-900">{editingCommentId ? "Update Comment" : "Add Comment"}</h3>
         <div className="grid gap-3">
@@ -221,9 +294,22 @@ function TicketDetailsPage() {
             placeholder="Write a comment"
             rows={3}
           />
-          <button className="btn-primary w-fit" onClick={handleSubmitComment}>
-            {editingCommentId ? "Update Comment" : "Add Comment"}
-          </button>
+          <div className="flex gap-2">
+            <button className="btn-primary w-fit" onClick={handleSubmitComment}>
+              {editingCommentId ? "Update Comment" : "Add Comment"}
+            </button>
+            {editingCommentId && (
+              <button
+                className="btn-secondary w-fit"
+                onClick={() => {
+                  setCommentText("");
+                  setEditingCommentId("");
+                }}
+              >
+                Cancel Edit
+              </button>
+            )}
+          </div>
         </div>
       </section>
     </AuthenticatedLayout>

@@ -59,6 +59,26 @@ public class TicketController {
         return ticketService.getMyTickets(user.getId());
     }
 
+    /**
+     * Get tickets assigned to the current logged-in technician.
+     */
+    @GetMapping("/assigned")
+    public List<Ticket> getAssignedTickets(@AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        currentUserService.requireAdminOrTechnician(user);
+        return ticketService.getAssignedTickets(user.getId());
+    }
+
+    /**
+     * Get list of available technicians for ticket assignment (admin only).
+     */
+    @GetMapping("/available-technicians")
+    public List<User> getAvailableTechnicians(@AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        currentUserService.requireAdmin(user);
+        return ticketService.getAvailableTechnicians();
+    }
+
     @GetMapping
     public List<Ticket> getAllTickets(@AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);

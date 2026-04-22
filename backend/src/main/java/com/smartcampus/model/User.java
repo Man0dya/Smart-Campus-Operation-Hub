@@ -24,4 +24,5 @@ public class User {
     private String passwordHash;
     private String profilePicture;
     private Role role;
+    private boolean available = true;
 }
