@@ -25,6 +25,7 @@ public class Booking {
     private Integer expectedAttendees;
     private BookingStatus status;
     private String adminReason;
+    private String cancelReason;
     private String createdAt;
     private String updatedAt;
     private String statusChangedAt;

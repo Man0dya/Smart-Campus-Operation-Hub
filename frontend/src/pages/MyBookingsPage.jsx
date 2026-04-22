@@ -74,9 +74,9 @@ function MyBookingsPage() {
     [resourceNameById]
   );
 
-  const handleCancel = async (bookingId) => {
+  const handleCancel = async (bookingId, reason) => {
     try {
-      await cancelBooking(bookingId);
+      await cancelBooking(bookingId, reason);
       await loadBookings();
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to cancel booking.");
@@ -91,7 +91,7 @@ function MyBookingsPage() {
     setConfirmDialog({ open: false, bookingId: "" });
   };
 
-  const handleConfirmCancel = async () => {
+  const handleConfirmCancel = async (reason) => {
     const bookingId = confirmDialog.bookingId;
     closeCancelDialog();
 
@@ -99,7 +99,7 @@ function MyBookingsPage() {
       return;
     }
 
-    await handleCancel(bookingId);
+    await handleCancel(bookingId, reason);
   };
 
   const filteredBookings = useMemo(() => {
@@ -213,6 +213,9 @@ function MyBookingsPage() {
         open={confirmDialog.open}
         title="Cancel Booking?"
         description="Are you sure you want to cancel this booking? This action cannot be undone."
+        inputLabel="Reason (optional)"
+        inputPlaceholder="Add a short reason for cancelling"
+        multilineInput
         confirmText="Yes, Cancel"
         cancelText="Keep Booking"
         onCancel={closeCancelDialog}
