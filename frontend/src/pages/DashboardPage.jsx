@@ -85,13 +85,22 @@ function DashboardPage() {
   }
 
   if (user?.role === "TECHNICIAN") {
-    roleCards.push({
-      title: "Ticket Service Desk",
-      desc: "Review open incidents and update ticket progress.",
-      to: "/admin/tickets",
-      icon: HiOutlineWrenchScrewdriver,
-      tag: "Service",
-    });
+    roleCards.push(
+      {
+        title: "My Assigned Tickets",
+        desc: "View and resolve tickets assigned to you by admin.",
+        to: "/technician/dashboard",
+        icon: HiOutlineWrenchScrewdriver,
+        tag: "Service",
+      },
+      {
+        title: "All Tickets",
+        desc: "Browse all incident tickets across the system.",
+        to: "/admin/tickets",
+        icon: HiOutlineClipboardDocumentList,
+        tag: "Service",
+      }
+    );
   }
 
   const allCards = [...cards, ...roleCards];
