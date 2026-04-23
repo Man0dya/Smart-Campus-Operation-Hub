@@ -2,6 +2,7 @@ import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import { getAssignedTickets, updateTicketStatus } from "../services/ticketApi";
+import { updateMyAvailability } from "../services/userApi";
 import {
   HiOutlineEye,
   HiOutlineCheckCircle,
@@ -46,7 +47,7 @@ const timeAgo = (dateStr) => {
 };
 
 function TechnicianDashboardPage() {
-  const { user } = useContext(AuthContext);
+  const { user, setUser } = useContext(AuthContext);
   const [tickets, setTickets] = useState([]);
   const [error, setError] = useState("");
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
@@ -54,6 +55,9 @@ function TechnicianDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [availabilityStatus, setAvailabilityStatus] = useState("AVAILABLE");
+  const [availabilityNote, setAvailabilityNote] = useState("");
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   // Resolve modal state
   const [resolveModal, setResolveModal] = useState({ open: false, ticketId: "" });
@@ -62,6 +66,34 @@ function TechnicianDashboardPage() {
 
   const showToast = (message, type = "success") => {
     setToast({ open: true, message, type });
+  };
+
+  useEffect(() => {
+    if (user?.role === "TECHNICIAN") {
+      setAvailabilityStatus(user.availabilityStatus || "AVAILABLE");
+      setAvailabilityNote(user.availabilityNote || "");
+    }
+  }, [user]);
+
+  const handleSaveAvailability = async () => {
+    if (!user || availabilityLoading) return;
+    setAvailabilityLoading(true);
+    setError("");
+
+    try {
+      const res = await updateMyAvailability({
+        status: availabilityStatus,
+        note: availabilityNote,
+      });
+      setUser(res.data);
+      showToast(`Availability updated to ${res.data.availabilityStatus.replace(/_/g, " ")}.`, "success");
+    } catch (err) {
+      const message = err?.response?.data?.error || "Unable to update availability.";
+      setError(message);
+      showToast(message, "danger");
+    } finally {
+      setAvailabilityLoading(false);
+    }
   };
 
   const loadTickets = useCallback(async () => {
@@ -193,6 +225,64 @@ function TechnicianDashboardPage() {
           </div>
         </div>
       </section>
+
+      {user?.role === "TECHNICIAN" && (
+        <section className="mb-5 panel rounded-3xl border border-slate-200 bg-slate-50 p-5">
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr] lg:items-end">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Assignment Availability</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Choose a current availability status and leave a short note for admins.
+                Only technicians marked AVAILABLE are considered for new assignments.
+              </p>
+            </div>
+            <div className="grid gap-3">
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+                  <StyledSelect
+                    name="availabilityStatus"
+                    value={availabilityStatus}
+                    onChange={(e) => setAvailabilityStatus(e.target.value)}
+                    options={[
+                      { value: "AVAILABLE", label: "Available" },
+                      { value: "BUSY", label: "Busy" },
+                      { value: "ON_LEAVE", label: "On Leave" },
+                      { value: "UNAVAILABLE", label: "Unavailable" },
+                    ]}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary w-full sm:w-auto"
+                  onClick={handleSaveAvailability}
+                  disabled={availabilityLoading}
+                >
+                  {availabilityLoading ? "Saving..." : "Save Availability"}
+                </button>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Note</label>
+                <textarea
+                  className="field min-h-24"
+                  value={availabilityNote}
+                  onChange={(e) => setAvailabilityNote(e.target.value)}
+                  placeholder='Add a note for admins (e.g. "On call, but no new tickets" or "Out for 2 hours")'
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${user.available ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                  {user.available ? "Available" : "Unavailable"}
+                </span>
+                {user.availabilityNote && (
+                  <p className="text-xs text-slate-500">Note: {user.availabilityNote}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Filters */}
       <section className="mb-5 panel flex flex-wrap items-center gap-3">

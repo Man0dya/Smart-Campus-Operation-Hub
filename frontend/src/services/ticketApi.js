@@ -7,6 +7,8 @@ export const getTicketById = (id) => api.get(`/tickets/${id}`);
 export const cancelTicket = (id) => api.patch(`/tickets/${id}/cancel`);
 export const updateTicketStatus = (id, payload) =>
   api.patch(`/tickets/${id}/status`, payload);
+export const postTicketResponse = (id, payload) =>
+  api.patch(`/tickets/${id}/response`, payload);
 export const deleteAdminTicket = (id) => api.delete(`/tickets/${id}`);
 
 export const getAssignedTickets = () => api.get("/tickets/assigned");
