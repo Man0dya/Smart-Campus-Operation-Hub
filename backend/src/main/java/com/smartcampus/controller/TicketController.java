@@ -16,8 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -28,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.List;
 
@@ -74,10 +75,11 @@ public class TicketController {
      * Get list of available technicians for ticket assignment (admin only).
      */
     @GetMapping("/available-technicians")
-    public List<User> getAvailableTechnicians(@AuthenticationPrincipal OAuth2User principal) {
+    public List<User> getAvailableTechnicians(@RequestParam(required = false) String category,
+                                              @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
         currentUserService.requireAdmin(user);
-        return ticketService.getAvailableTechnicians();
+        return ticketService.getAvailableTechniciansForCategory(category);
     }
 
     @GetMapping
