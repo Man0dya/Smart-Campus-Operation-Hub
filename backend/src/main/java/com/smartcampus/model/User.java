@@ -25,5 +25,8 @@ public class User {
     private String profilePicture;
     private Role role;
     @Builder.Default
+    private String availabilityStatus = "AVAILABLE";
+    private String availabilityNote;
+    @Builder.Default
     private boolean available = true;
 }

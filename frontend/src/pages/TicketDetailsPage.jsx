@@ -5,6 +5,7 @@ import {
   deleteComment,
   getCommentsByTicket,
   getTicketById,
+  postTicketResponse,
   updateComment,
 } from "../services/ticketApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
@@ -57,6 +58,8 @@ function TicketDetailsPage() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState("");
+  const [responseText, setResponseText] = useState("");
+  const [responseLoading, setResponseLoading] = useState(false);
   const [error, setError] = useState("");
   const [commentFilter, setCommentFilter] = useState("");
   const [page, setPage] = useState(1);
@@ -106,6 +109,22 @@ function TicketDetailsPage() {
       await loadData();
     } catch (err) {
       setError(err?.response?.data?.error || "Failed to delete comment.");
+    }
+  };
+
+  const handleSubmitResponse = async () => {
+    if (!responseText.trim()) return;
+
+    setResponseLoading(true);
+    try {
+      await postTicketResponse(id, { response: responseText.trim() });
+      setResponseText("");
+      await loadData();
+      setError("");
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to submit response.");
+    } finally {
+      setResponseLoading(false);
     }
   };
 
@@ -189,6 +208,35 @@ function TicketDetailsPage() {
             <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
               <span className="font-medium">Resolution:</span> {ticket.resolutionNotes}
             </p>
+          )}
+
+          {ticket.technicianResponse && (
+            <div className="rounded-lg bg-slate-50 px-3 py-3 text-sm text-slate-700">
+              <p className="mb-1 text-sm font-semibold text-slate-900">Technician Response</p>
+              <p>{ticket.technicianResponse}</p>
+            </div>
+          )}
+
+          {user?.role === "TECHNICIAN" && ticket?.assignedTo === user?.id && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="mb-2 text-sm font-semibold text-slate-900">Add response to ticket</p>
+              <textarea
+                className="field min-h-24"
+                value={responseText}
+                onChange={(e) => setResponseText(e.target.value)}
+                placeholder="Write a response or update for the ticket requester"
+                rows={4}
+              />
+              <div className="mt-3 flex gap-2">
+                <button
+                  className="btn-primary"
+                  onClick={handleSubmitResponse}
+                  disabled={responseLoading}
+                >
+                  {responseLoading ? "Sending..." : "Send Response"}
+                </button>
+              </div>
+            </div>
           )}
         </section>
       )}

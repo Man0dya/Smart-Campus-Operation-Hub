@@ -1,5 +1,6 @@
 package com.smartcampus.controller;
 
+import com.smartcampus.dto.TechnicianResponseRequest;
 import com.smartcampus.dto.TicketCreateRequest;
 import com.smartcampus.dto.TicketStatusUpdateRequest;
 import com.smartcampus.enums.Role;
@@ -111,6 +112,15 @@ public class TicketController {
                 user,
                 actorIsAdminOrTech
         );
+    }
+
+    @PatchMapping("/{id}/response")
+    public Ticket addTechnicianResponse(@PathVariable String id,
+                                        @Valid @RequestBody TechnicianResponseRequest request,
+                                        @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        boolean actorIsAdminOrTech = user.getRole() == Role.ADMIN || user.getRole() == Role.TECHNICIAN;
+        return ticketService.addTechnicianResponse(id, request.response(), user, actorIsAdminOrTech);
     }
 
     @PatchMapping("/{id}/cancel")

@@ -351,6 +351,40 @@ public class TicketService {
         }
     }
 
+    public Ticket addTechnicianResponse(String id, String response, User actor, boolean actorIsAdminOrTech) {
+        if (!actorIsAdminOrTech) {
+            throw new ForbiddenOperationException("Only admin or technician can add a ticket response.");
+        }
+
+        Ticket ticket = getTicketById(id);
+
+        if (actor.getRole() == Role.TECHNICIAN && !isAssignedTo(ticket, actor.getId())) {
+            throw new ForbiddenOperationException("Technician can only respond to tickets assigned to them.");
+        }
+
+        if (response == null || response.isBlank()) {
+            throw new IllegalArgumentException("Response text is required.");
+        }
+
+        ticket.setTechnicianResponse(response.trim());
+        ticket.setUpdatedAt(Instant.now().toString());
+
+        Ticket saved = ticketRepository.save(ticket);
+
+        String actorName = actor.getName() != null && !actor.getName().isBlank() ? actor.getName() : actor.getEmail();
+        createSystemComment(ticket.getId(), "SYSTEM",
+                "🗨️ Technician response added by " + actorName + ".");
+
+        notificationService.createNotification(
+                ticket.getReportedBy(),
+                "Ticket Response Updated",
+                "Your ticket #" + ticket.getId() + " has a new response from the technician.",
+                "TICKET"
+        );
+
+        return saved;
+    }
+
     public void ensureTicketAccess(Ticket ticket, User actor, boolean actorIsAdminOrTech) {
         if (actor.getRole() == Role.ADMIN) {
             return;
@@ -414,7 +448,7 @@ public class TicketService {
             .filter(assignedUserId -> assignedUserId != null && !assignedUserId.isBlank())
             .collect(Collectors.toSet());
 
-        return userRepository.findByRole(Role.TECHNICIAN).stream()
+        return userRepository.findByRoleAndAvailableTrue(Role.TECHNICIAN).stream()
             .filter(technician -> !busyTechnicianIds.contains(technician.getId()))
             .toList();
     }

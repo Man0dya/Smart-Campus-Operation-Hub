@@ -32,6 +32,7 @@ public class Ticket {
     private String contactDetails;
     private TicketStatus status;
     private String resolutionNotes;
+    private String technicianResponse;
     private List<Attachment> attachments;
     private String createdAt;
     private String updatedAt;
