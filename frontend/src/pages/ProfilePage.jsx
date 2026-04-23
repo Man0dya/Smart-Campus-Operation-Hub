@@ -2,13 +2,16 @@ import { useContext, useState } from "react";
 import AuthContext from "../context/auth-context";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import FloatingToast from "../components/common/FloatingToast";
-import { updateMyAvailability } from "../services/userApi";
+import { updateMyAvailability, updateMySkills } from "../services/userApi";
 
 function ProfilePage() {
   const { user, setUser } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
   const [error, setError] = useState("");
+  const [skills, setSkills] = useState(user?.skills || []);
+  const [certifications, setCertifications] = useState(user?.certifications || []);
+  const [skillsLoading, setSkillsLoading] = useState(false);
 
   const handleToggleAvailability = async () => {
     if (!user || loading) return;
@@ -28,6 +31,36 @@ function ProfilePage() {
       setToast({ open: true, message: "Unable to update availability.", type: "danger" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateSkills = async () => {
+    if (!user || skillsLoading) return;
+    setSkillsLoading(true);
+    setError("");
+
+    try {
+      const validSkills = skills.filter(skill =>
+        skill.name && skill.name.trim() &&
+        skill.category && skill.category.trim() &&
+        skill.level && skill.level.trim()
+      );
+
+      const res = await updateMySkills({
+        skills: validSkills,
+        certifications: certifications.filter(c => c.trim())
+      });
+      setUser(res.data);
+      setToast({
+        open: true,
+        message: "Skills updated successfully.",
+        type: "success",
+      });
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to update skills.");
+      setToast({ open: true, message: "Unable to update skills.", type: "danger" });
+    } finally {
+      setSkillsLoading(false);
     }
   };
 
@@ -88,6 +121,126 @@ function ProfilePage() {
                 >
                   {loading ? "Saving..." : user.available ? "Set Unavailable" : "Set Available"}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {user.role === "TECHNICIAN" && (
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Specialization & Skills</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Add your areas of expertise to help admins assign relevant tickets.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Skills</label>
+                  <div className="space-y-2">
+                    {skills.map((skill, index) => {
+                      const isIncomplete = !skill.name?.trim() || !skill.category || !skill.level;
+                      return (
+                        <div key={index} className={`flex gap-2 items-center p-2 rounded ${isIncomplete ? 'bg-red-50 border border-red-200' : 'bg-slate-50'}`}>
+                          <input
+                            type="text"
+                            className={`field flex-1 ${isIncomplete ? 'border-red-300' : ''}`}
+                            placeholder="Skill name"
+                            value={skill.name || ''}
+                            onChange={(e) => {
+                              const newSkills = [...skills];
+                              newSkills[index] = { ...newSkills[index], name: e.target.value };
+                              setSkills(newSkills);
+                            }}
+                          />
+                          <select
+                            className={`field w-32 ${isIncomplete && !skill.category ? 'border-red-300' : ''}`}
+                            value={skill.category || ''}
+                            onChange={(e) => {
+                              const newSkills = [...skills];
+                              newSkills[index] = { ...newSkills[index], category: e.target.value };
+                              setSkills(newSkills);
+                            }}
+                          >
+                            <option value="">Category</option>
+                            <option value="ELECTRICAL">Electrical</option>
+                            <option value="PLUMBING">Plumbing</option>
+                            <option value="HVAC">HVAC</option>
+                            <option value="CARPENTRY">Carpentry</option>
+                            <option value="PAINTING">Painting</option>
+                            <option value="CLEANING">Cleaning</option>
+                            <option value="IT_SUPPORT">IT Support</option>
+                            <option value="NETWORKING">Networking</option>
+                            <option value="SECURITY">Security</option>
+                            <option value="MAINTENANCE">General Maintenance</option>
+                            <option value="LANDSCAPING">Landscaping</option>
+                            <option value="OTHER">Other</option>
+                          </select>
+                          <select
+                            className={`field w-32 ${isIncomplete && !skill.level ? 'border-red-300' : ''}`}
+                            value={skill.level || ''}
+                            onChange={(e) => {
+                              const newSkills = [...skills];
+                              newSkills[index] = { ...newSkills[index], level: e.target.value };
+                              setSkills(newSkills);
+                            }}
+                          >
+                            <option value="">Level</option>
+                            <option value="BEGINNER">Beginner</option>
+                            <option value="INTERMEDIATE">Intermediate</option>
+                            <option value="ADVANCED">Advanced</option>
+                            <option value="EXPERT">Expert</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="btn-danger text-sm px-2 py-1"
+                            onClick={() => setSkills(skills.filter((_, i) => i !== index))}
+                          >
+                            Remove
+                          </button>
+                          {skill.verified && (
+                            <span className="text-green-600 text-sm">✓ Verified</span>
+                          )}
+                          {isIncomplete && (
+                            <span className="text-red-600 text-sm">⚠ Incomplete</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      className="btn-secondary text-sm"
+                      onClick={() => setSkills([...skills, { name: '', category: '', level: 'BEGINNER', verified: false }])}
+                    >
+                      Add Skill
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Certifications</label>
+                  <textarea
+                    className="field min-h-20"
+                    value={certifications.join('\n')}
+                    onChange={(e) => setCertifications(e.target.value.split('\n').filter(c => c.trim()))}
+                    placeholder="Enter each certification on a new line (e.g. OSHA Certified, Licensed Electrician)"
+                    rows={3}
+                  />
+                  <p className="mt-1 text-xs text-slate-500">One certification per line</p>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleUpdateSkills}
+                    disabled={skillsLoading || skills.some(skill => !skill.name?.trim() || !skill.category || !skill.level)}
+                  >
+                    {skillsLoading ? "Saving..." : "Update Skills"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

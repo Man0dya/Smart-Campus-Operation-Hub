@@ -2,12 +2,14 @@ package com.smartcampus.service;
 
 import com.smartcampus.dto.TicketCreateRequest;
 import com.smartcampus.enums.Role;
+import com.smartcampus.enums.SkillCategory;
 import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.exception.ForbiddenOperationException;
 import com.smartcampus.exception.ConflictException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.model.Attachment;
 import com.smartcampus.model.Comment;
+import com.smartcampus.model.Skill;
 import com.smartcampus.model.Ticket;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.CommentRepository;
@@ -451,6 +453,72 @@ public class TicketService {
         return userRepository.findByRoleAndAvailableTrue(Role.TECHNICIAN).stream()
             .filter(technician -> !busyTechnicianIds.contains(technician.getId()))
             .toList();
+    }
+
+    public List<User> getAvailableTechniciansForCategory(String category) {
+        if (category == null || category.trim().isEmpty()) {
+            return getAvailableTechnicians();
+        }
+
+        Set<String> busyTechnicianIds = ticketRepository.findByStatusAndAssignedToIsNotNull(TicketStatus.IN_PROGRESS)
+            .stream()
+            .map(Ticket::getAssignedTo)
+            .filter(assignedUserId -> assignedUserId != null && !assignedUserId.isBlank())
+            .collect(Collectors.toSet());
+
+        return userRepository.findByRoleAndAvailableTrue(Role.TECHNICIAN).stream()
+            .filter(technician -> !busyTechnicianIds.contains(technician.getId()))
+            .filter(technician -> hasMatchingSkillForCategory(technician, category.trim()))
+            .sorted((t1, t2) -> Integer.compare(getSkillScore(t2, category.trim()), getSkillScore(t1, category.trim())))
+            .toList();
+    }
+
+    private boolean hasMatchingSkillForCategory(User technician, String category) {
+        if (technician.getSkills() == null) return false;
+
+        try {
+            SkillCategory skillCategory = SkillCategory.valueOf(category.toUpperCase().replace(" ", "_"));
+            return technician.getSkills().stream()
+                .anyMatch(skill -> skill.getCategory() == skillCategory && skill.isVerified());
+        } catch (IllegalArgumentException e) {
+            // If category doesn't match enum, try partial matching
+            return technician.getSkills().stream()
+                .anyMatch(skill -> skill.getCategory() != null &&
+                                  skill.getCategory().name().toLowerCase().contains(category.toLowerCase()) &&
+                                  skill.isVerified());
+        }
+    }
+
+    private int getSkillScore(User technician, String category) {
+        if (technician.getSkills() == null) return 0;
+
+        try {
+            SkillCategory skillCategory = SkillCategory.valueOf(category.toUpperCase().replace(" ", "_"));
+            return technician.getSkills().stream()
+                .filter(skill -> skill.getCategory() == skillCategory)
+                .filter(Skill::isVerified)
+                .mapToInt(skill -> switch (skill.getLevel()) {
+                    case BEGINNER -> 1;
+                    case INTERMEDIATE -> 2;
+                    case ADVANCED -> 3;
+                    case EXPERT -> 4;
+                })
+                .max()
+                .orElse(0);
+        } catch (IllegalArgumentException e) {
+            return technician.getSkills().stream()
+                .filter(skill -> skill.getCategory() != null &&
+                                skill.getCategory().name().toLowerCase().contains(category.toLowerCase()))
+                .filter(Skill::isVerified)
+                .mapToInt(skill -> switch (skill.getLevel()) {
+                    case BEGINNER -> 1;
+                    case INTERMEDIATE -> 2;
+                    case ADVANCED -> 3;
+                    case EXPERT -> 4;
+                })
+                .max()
+                .orElse(0);
+        }
     }
 
     private boolean isValidTransition(TicketStatus current, TicketStatus next) {

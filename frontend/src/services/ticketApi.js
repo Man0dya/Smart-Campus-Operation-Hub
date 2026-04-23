@@ -12,8 +12,8 @@ export const postTicketResponse = (id, payload) =>
 export const deleteAdminTicket = (id) => api.delete(`/tickets/${id}`);
 
 export const getAssignedTickets = () => api.get("/tickets/assigned");
-export const getAvailableTechnicians = () =>
-  api.get("/tickets/available-technicians");
+export const getAvailableTechnicians = (category) =>
+  api.get("/tickets/available-technicians", { params: category ? { category } : {} });
 
 export const uploadTicketAttachments = (id, files) => {
   const formData = new FormData();

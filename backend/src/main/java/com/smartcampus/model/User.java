@@ -6,6 +6,9 @@ import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Document(collection = "users")
 @Getter
 @Setter
@@ -29,4 +32,8 @@ public class User {
     private String availabilityNote;
     @Builder.Default
     private boolean available = true;
+    @Builder.Default
+    private List<Skill> skills = new ArrayList<>();
+    @Builder.Default
+    private List<String> certifications = new ArrayList<>();
 }

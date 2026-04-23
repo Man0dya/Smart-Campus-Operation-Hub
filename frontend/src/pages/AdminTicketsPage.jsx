@@ -75,11 +75,11 @@ function AdminTicketsPage() {
     }
   }, []);
 
-  const loadTechnicians = useCallback(async () => {
+  const loadTechnicians = useCallback(async (category) => {
     // Only admin can fetch available technicians
     if (user?.role !== "ADMIN") return;
     try {
-      const res = await getAvailableTechnicians();
+      const res = await getAvailableTechnicians(category);
       setAvailableTechnicians(res.data || []);
     } catch {
       // Non-critical, silently fail
@@ -154,8 +154,9 @@ function AdminTicketsPage() {
   const openEditor = (ticketId) => {
     setActiveTicketId(ticketId);
     setDrawerOpen(true);
-    // Refresh available technicians when opening the editor
-    void loadTechnicians();
+    // Refresh available technicians for this ticket's category
+    const ticket = tickets.find(t => t.id === ticketId);
+    void loadTechnicians(ticket?.category);
   };
 
   const closeEditor = () => {
