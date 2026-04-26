@@ -54,6 +54,26 @@ function AdminResourcesPage() {
   const [pageSize, setPageSize] = useState(10);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, resourceId: "" });
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+  const [formErrors, setFormErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!form.name || !form.name.trim()) newErrors.name = "Resource name is required.";
+    else if (form.name.trim().length > 120) newErrors.name = "Resource name must be less than 120 characters.";
+
+    if (!form.type) newErrors.type = "Resource type is required.";
+
+    if (form.capacity !== "") {
+      const cap = Number(form.capacity);
+      if (cap < 0) newErrors.capacity = "Capacity cannot be negative.";
+    }
+
+    if (form.location && form.location.trim().length > 120) newErrors.location = "Location must be less than 120 characters.";
+    
+    if (form.description && form.description.trim().length > 500) newErrors.description = "Description must be less than 500 characters.";
+
+    return newErrors;
+  };
 
   const showToast = (message, type = "success") => {
     setToast({ open: true, message, type });
@@ -90,8 +110,21 @@ function AdminResourcesPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+
     try {
-      const payload = toPayload(form);
+      const payload = toPayload({
+        ...form,
+        name: form.name.trim(),
+        location: form.location.trim(),
+        description: form.description.trim()
+      });
       if (editingId) {
         await updateResource(editingId, payload);
         showToast("Resource updated.");
@@ -123,12 +156,14 @@ function AdminResourcesPage() {
     setEditingId(resource.id);
     setDrawerOpen(true);
     setError("");
+    setFormErrors({});
   };
 
   const openCreateDrawer = () => {
     setEditingId("");
     setForm(emptyForm);
     setError("");
+    setFormErrors({});
     setDrawerOpen(true);
   };
 
@@ -362,12 +397,16 @@ function AdminResourcesPage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Resource Name</label>
             <input
-              className="field"
+              className={`field ${formErrors.name ? "border-rose-400 focus:border-rose-400" : ""}`}
               placeholder="Resource name"
               value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, name: e.target.value }));
+                if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: "" }));
+              }}
               required
             />
+            {formErrors.name && <p className="mt-1 text-xs text-rose-600">{formErrors.name}</p>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -376,7 +415,10 @@ function AdminResourcesPage() {
               <StyledSelect
                 name="type"
                 value={form.type}
-                onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
+                onChange={(e) => {
+                  setForm((prev) => ({ ...prev, type: e.target.value }));
+                  if (formErrors.type) setFormErrors((prev) => ({ ...prev, type: "" }));
+                }}
                 options={[
                   { value: "LECTURE_HALL", label: "Lecture Hall" },
                   { value: "LAB", label: "Lab" },
@@ -384,29 +426,38 @@ function AdminResourcesPage() {
                   { value: "EQUIPMENT", label: "Equipment" },
                 ]}
               />
+              {formErrors.type && <p className="mt-1 text-xs text-rose-600">{formErrors.type}</p>}
             </div>
 
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Capacity</label>
               <input
-                className="field"
+                className={`field ${formErrors.capacity ? "border-rose-400 focus:border-rose-400" : ""}`}
                 type="number"
                 min="0"
                 placeholder="Capacity"
                 value={form.capacity}
-                onChange={(e) => setForm((prev) => ({ ...prev, capacity: e.target.value }))}
+                onChange={(e) => {
+                  setForm((prev) => ({ ...prev, capacity: e.target.value }));
+                  if (formErrors.capacity) setFormErrors((prev) => ({ ...prev, capacity: "" }));
+                }}
               />
+              {formErrors.capacity && <p className="mt-1 text-xs text-rose-600">{formErrors.capacity}</p>}
             </div>
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Location</label>
             <input
-              className="field"
+              className={`field ${formErrors.location ? "border-rose-400 focus:border-rose-400" : ""}`}
               placeholder="Location"
               value={form.location}
-              onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, location: e.target.value }));
+                if (formErrors.location) setFormErrors((prev) => ({ ...prev, location: "" }));
+              }}
             />
+            {formErrors.location && <p className="mt-1 text-xs text-rose-600">{formErrors.location}</p>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -447,11 +498,15 @@ function AdminResourcesPage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
             <textarea
-              className="field min-h-24"
+              className={`field min-h-24 ${formErrors.description ? "border-rose-400 focus:border-rose-400" : ""}`}
               placeholder="Description"
               value={form.description}
-              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, description: e.target.value }));
+                if (formErrors.description) setFormErrors((prev) => ({ ...prev, description: "" }));
+              }}
             />
+            {formErrors.description && <p className="mt-1 text-xs text-rose-600">{formErrors.description}</p>}
           </div>
 
           <div className="flex items-center gap-2 pt-2">

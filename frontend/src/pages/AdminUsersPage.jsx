@@ -55,6 +55,26 @@ function AdminUsersPage() {
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const [selectedTechnician, setSelectedTechnician] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!form.name || !form.name.trim()) newErrors.name = "Name is required.";
+    else if (form.name.trim().length > 120) newErrors.name = "Name must be less than 120 characters.";
+
+    if (!form.email || !form.email.trim()) newErrors.email = "Email is required.";
+    else if (!emailRegex.test(form.email.trim())) newErrors.email = "Please enter a valid email address.";
+
+    if (!editingId && (!form.password || form.password.length < 6)) {
+      newErrors.password = "Password must be at least 6 characters.";
+    } else if (editingId && form.password && form.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters.";
+    }
+
+    return newErrors;
+  };
 
   const handleVerifySkill = async (userId, skillName, verified) => {
     try {
@@ -128,6 +148,7 @@ function AdminUsersPage() {
     setEditingId("");
     setForm(emptyForm);
     setError("");
+    setFormErrors({});
     setDrawerOpen(true);
   };
 
@@ -140,6 +161,7 @@ function AdminUsersPage() {
       password: "",
     });
     setError("");
+    setFormErrors({});
     setDrawerOpen(true);
   };
 
@@ -152,17 +174,19 @@ function AdminUsersPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+
     const payload = {
       name: form.name.trim(),
       email: form.email.trim(),
       role: form.role,
       password: form.password,
     };
-
-    if (!editingId && !payload.password) {
-      setError("Password is required for new users.");
-      return;
-    }
 
     try {
       if (editingId) {
@@ -362,24 +386,32 @@ function AdminUsersPage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
             <input
-              className="field"
+              className={`field ${formErrors.name ? "border-rose-400 focus:border-rose-400" : ""}`}
               value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, name: e.target.value }));
+                if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: "" }));
+              }}
               placeholder="Full name"
               required
             />
+            {formErrors.name && <p className="mt-1 text-xs text-rose-600">{formErrors.name}</p>}
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Email</label>
             <input
-              className="field"
+              className={`field ${formErrors.email ? "border-rose-400 focus:border-rose-400" : ""}`}
               type="email"
               value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, email: e.target.value }));
+                if (formErrors.email) setFormErrors((prev) => ({ ...prev, email: "" }));
+              }}
               placeholder="Email"
               required
             />
+            {formErrors.email && <p className="mt-1 text-xs text-rose-600">{formErrors.email}</p>}
           </div>
 
           <div>
@@ -401,13 +433,17 @@ function AdminUsersPage() {
               {editingId ? "Password (leave blank to keep current)" : "Password"}
             </label>
             <input
-              className="field"
+              className={`field ${formErrors.password ? "border-rose-400 focus:border-rose-400" : ""}`}
               type="password"
               value={form.password}
-              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, password: e.target.value }));
+                if (formErrors.password) setFormErrors((prev) => ({ ...prev, password: "" }));
+              }}
               placeholder={editingId ? "Optional password update" : "Minimum 6 characters"}
               required={!editingId}
             />
+            {formErrors.password && <p className="mt-1 text-xs text-rose-600">{formErrors.password}</p>}
           </div>
 
           <div className="flex items-center gap-2 pt-2">

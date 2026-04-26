@@ -37,6 +37,19 @@ function CreateTicketPage() {
   const [error, setError] = useState("");
   const [files, setFiles] = useState([]);
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+  const [formErrors, setFormErrors] = useState({});
+
+  const validateForm = () => {
+    const errors = {};
+    if (!form.category) errors.category = "Issue Category is required.";
+    if (!form.description || !form.description.trim()) errors.description = "Issue Description is required.";
+    else if (form.description.trim().length > 1000) errors.description = "Description must be less than 1000 characters.";
+    
+    if (!form.contactDetails || !form.contactDetails.trim()) errors.contactDetails = "Preferred Contact is required.";
+    else if (form.contactDetails.trim().length > 160) errors.contactDetails = "Contact details must be less than 160 characters.";
+    
+    return errors;
+  };
 
   const showToast = (message, type = "success") => {
     setToast({ open: true, message, type });
@@ -110,6 +123,13 @@ function CreateTicketPage() {
       return;
     }
 
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+
     setSubmitting(true);
     setError("");
     try {
@@ -176,9 +196,13 @@ function CreateTicketPage() {
               className="w-full"
               name="category"
               value={form.category}
-              onChange={handleChange}
+              onChange={(e) => {
+                handleChange(e);
+                if (formErrors.category) setFormErrors((prev) => ({ ...prev, category: "" }));
+              }}
               options={issueCategoryOptions}
             />
+            {formErrors.category && <p className="mt-1 text-xs text-rose-600">{formErrors.category}</p>}
           </div>
 
           <div>
@@ -197,19 +221,33 @@ function CreateTicketPage() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Preferred Contact</label>
-            <input className="field" name="contactDetails" value={form.contactDetails} onChange={handleChange} placeholder="Email or phone" />
+            <input 
+              className={`field ${formErrors.contactDetails ? "border-rose-400 focus:border-rose-400" : ""}`} 
+              name="contactDetails" 
+              value={form.contactDetails} 
+              onChange={(e) => {
+                handleChange(e);
+                if (formErrors.contactDetails) setFormErrors((prev) => ({ ...prev, contactDetails: "" }));
+              }} 
+              placeholder="Email or phone" 
+            />
+            {formErrors.contactDetails && <p className="mt-1 text-xs text-rose-600">{formErrors.contactDetails}</p>}
           </div>
 
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-slate-700">Issue Description</label>
             <textarea
-              className="field min-h-28"
+              className={`field min-h-28 ${formErrors.description ? "border-rose-400 focus:border-rose-400" : ""}`}
               name="description"
               value={form.description}
-              onChange={handleChange}
+              onChange={(e) => {
+                handleChange(e);
+                if (formErrors.description) setFormErrors((prev) => ({ ...prev, description: "" }));
+              }}
               placeholder="Describe what happened, where, and impact"
               rows={4}
             />
+            {formErrors.description && <p className="mt-1 text-xs text-rose-600">{formErrors.description}</p>}
           </div>
 
           <div className="sm:col-span-2">

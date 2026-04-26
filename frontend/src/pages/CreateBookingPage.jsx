@@ -57,7 +57,39 @@ function CreateBookingPage() {
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
+  const [formErrors, setFormErrors] = useState({});
   const minBookingDate = useMemo(() => getTodayLocalDateString(), []);
+
+  const validateForm = () => {
+    const errors = {};
+    if (!form.resourceId) errors.resourceId = "Please select a resource.";
+    if (!form.date) errors.date = "Please select a date.";
+    else if (form.date < minBookingDate) errors.date = "Booking date cannot be in the past.";
+    
+    if (!form.startTime) errors.startTime = "Start time is required.";
+    if (!form.endTime) errors.endTime = "End time is required.";
+    
+    if (form.startTime && form.endTime) {
+       const startMinutes = toMinutes(form.startTime);
+       const endMinutes = toMinutes(form.endTime);
+       if (startMinutes !== null && endMinutes !== null) {
+         const durationMinutes = endMinutes - startMinutes;
+         if (durationMinutes < 30) errors.endTime = "Time range must be at least 30 minutes.";
+         else if (durationMinutes > 240) errors.endTime = "Time range cannot exceed 4 hours.";
+       }
+    }
+
+    if (!form.purpose || !form.purpose.trim()) errors.purpose = "Purpose is required.";
+    else if (form.purpose.trim().length > 300) errors.purpose = "Purpose must be less than 300 characters.";
+
+    if (form.expectedAttendees) {
+      const attendees = Number(form.expectedAttendees);
+      if (attendees < 1) errors.expectedAttendees = "Attendees must be at least 1.";
+      else if (attendees > 5000) errors.expectedAttendees = "Attendees cannot exceed 5000.";
+    }
+
+    return errors;
+  };
 
   const showToast = (message, type = "success") => {
     setToast({ open: true, message, type });
@@ -259,35 +291,13 @@ function CreateBookingPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.resourceId) {
-      setError("Please select a resource ID.");
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setError("");
       return;
     }
-
-    if (form.date && form.date < minBookingDate) {
-      setError("Booking date cannot be in the past.");
-      return;
-    }
-
-    const startMinutes = toMinutes(form.startTime);
-    const endMinutes = toMinutes(form.endTime);
-
-    if (startMinutes === null || endMinutes === null) {
-      setError("Please select a valid start and end time.");
-      return;
-    }
-
-    const durationMinutes = endMinutes - startMinutes;
-
-    if (durationMinutes < 30) {
-      setError("Time range must be at least 30 minutes.");
-      return;
-    }
-
-    if (durationMinutes > 240) {
-      setError("Time range cannot exceed 4 hours.");
-      return;
-    }
+    setFormErrors({});
 
     try {
       await createBooking({
@@ -347,14 +357,18 @@ function CreateBookingPage() {
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Date</label>
                   <input
-                    className="field"
+                    className={`field ${formErrors.date ? "border-rose-400 focus:border-rose-400" : ""}`}
                     name="date"
                     type="date"
                     value={form.date}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (formErrors.date) setFormErrors((prev) => ({ ...prev, date: "" }));
+                    }}
                     min={minBookingDate}
                     required
                   />
+                  {formErrors.date && <p className="mt-1 text-xs text-rose-600">{formErrors.date}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-slate-700">Resource Name</label>
@@ -362,13 +376,17 @@ function CreateBookingPage() {
                     className="w-full"
                     name="resourceId"
                     value={form.resourceId}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (formErrors.resourceId) setFormErrors((prev) => ({ ...prev, resourceId: "" }));
+                    }}
                     options={resourceOptions}
                     placeholder={loadingResources ? "Loading resources..." : "Select resource"}
                     searchable
                     searchPlaceholder="Search by resource name"
                     disabled={loadingResources || resourceOptions.length === 0}
                   />
+                  {formErrors.resourceId && <p className="mt-1 text-xs text-rose-600">{formErrors.resourceId}</p>}
                   {resourceOptions.length === 0 && !loadingResources && (
                     <p className="mt-1 text-xs text-slate-500">No resources available for the selected category.</p>
                   )}
@@ -388,12 +406,16 @@ function CreateBookingPage() {
                     className="w-full"
                     name="startTime"
                     value={form.startTime}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (formErrors.startTime) setFormErrors((prev) => ({ ...prev, startTime: "" }));
+                    }}
                     options={startTimeOptions}
                     placeholder={loadingAvailability ? "Loading available times..." : "Select start time"}
                     disabled={!form.resourceId || !form.date || loadingAvailability || startTimeOptions.length === 0}
                     required
                   />
+                  {formErrors.startTime && <p className="mt-1 text-xs text-rose-600">{formErrors.startTime}</p>}
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">End Time</label>
@@ -401,13 +423,20 @@ function CreateBookingPage() {
                     className="w-full"
                     name="endTime"
                     value={form.endTime}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (formErrors.endTime) setFormErrors((prev) => ({ ...prev, endTime: "" }));
+                    }}
                     options={endTimeOptions}
                     placeholder="Select end time"
                     disabled={!form.startTime || endTimeOptions.length === 0}
                     required
                   />
-                  <p className="mt-1 text-xs text-slate-500">Duration must be between 30 minutes and 4 hours.</p>
+                  {formErrors.endTime ? (
+                    <p className="mt-1 text-xs text-rose-600">{formErrors.endTime}</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500">Duration must be between 30 minutes and 4 hours.</p>
+                  )}
                   {form.resourceId && form.date && !loadingAvailability && startTimeOptions.length === 0 && (
                     <p className="mt-1 text-xs text-rose-600">No available times for this resource on the selected date.</p>
                   )}
@@ -415,25 +444,33 @@ function CreateBookingPage() {
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Expected Attendees</label>
                   <input
-                    className="field"
+                    className={`field ${formErrors.expectedAttendees ? "border-rose-400 focus:border-rose-400" : ""}`}
                     name="expectedAttendees"
                     type="number"
                     min="1"
                     value={form.expectedAttendees}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (formErrors.expectedAttendees) setFormErrors((prev) => ({ ...prev, expectedAttendees: "" }));
+                    }}
                     placeholder="Optional"
                   />
+                  {formErrors.expectedAttendees && <p className="mt-1 text-xs text-rose-600">{formErrors.expectedAttendees}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-slate-700">Purpose</label>
                   <textarea
-                    className="field min-h-24"
+                    className={`field min-h-24 ${formErrors.purpose ? "border-rose-400 focus:border-rose-400" : ""}`}
                     name="purpose"
                     value={form.purpose}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (formErrors.purpose) setFormErrors((prev) => ({ ...prev, purpose: "" }));
+                    }}
                     placeholder="Describe the purpose of this booking"
                     required
                   />
+                  {formErrors.purpose && <p className="mt-1 text-xs text-rose-600">{formErrors.purpose}</p>}
                 </div>
               </div>
             </div>
