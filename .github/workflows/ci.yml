@@ -23,7 +23,9 @@ jobs:
           cache: maven
 
       - name: Build and test backend
-        run: ./mvnw -B verify
+        run: |
+          chmod +x mvnw
+          ./mvnw -B verify
 
   frontend:
     runs-on: ubuntu-latest
