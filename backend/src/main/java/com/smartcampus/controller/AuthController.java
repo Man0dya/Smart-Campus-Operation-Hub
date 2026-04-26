@@ -8,6 +8,7 @@ import com.smartcampus.exception.UnauthorizedException;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.UserRepository;
 import com.smartcampus.service.CurrentUserService;
+import com.smartcampus.service.NotificationService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,16 +41,19 @@ public class AuthController {
     private final CurrentUserService currentUserService;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
     public AuthController(UserRepository userRepository,
                           CurrentUserService currentUserService,
                           AuthenticationManager authenticationManager,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder,
+                          NotificationService notificationService) {
         this.userRepository = userRepository;
         this.currentUserService = currentUserService;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
     }
 
     @PostMapping("/register")
@@ -77,7 +81,21 @@ public class AuthController {
                 .role(Role.USER)
                 .build();
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(userRepository.save(created));
+        User saved = userRepository.save(created);
+
+        notificationService.createNotification(
+            saved.getId(),
+            "Welcome to SmartCampus",
+            "Your account is ready. You can now create bookings and receive updates.",
+            "USER"
+        );
+        notificationService.notifyAllAdmins(
+            "New user registered",
+            "A new user account was created for " + saved.getEmail() + ".",
+            "USER"
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PostMapping("/login")

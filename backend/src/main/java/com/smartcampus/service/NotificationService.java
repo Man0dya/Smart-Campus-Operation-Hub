@@ -1,8 +1,11 @@
 package com.smartcampus.service;
 
+import com.smartcampus.enums.Role;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.model.Notification;
+import com.smartcampus.model.User;
 import com.smartcampus.repository.NotificationRepository;
+import com.smartcampus.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -13,9 +16,11 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository) {
         this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
     }
 
     public Notification createNotification(String userId, String title, String message, String type) {
@@ -33,6 +38,17 @@ public class NotificationService {
 
     public List<Notification> getNotificationsForUser(String userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    public void notifyAllAdmins(String title, String message, String type) {
+        List<User> admins = userRepository.findByRole(Role.ADMIN);
+        if (admins == null || admins.isEmpty()) {
+            return;
+        }
+
+        for (User admin : admins) {
+            createNotification(admin.getId(), title, message, type);
+        }
     }
 
     public Notification markAsRead(String notificationId, String userId) {
