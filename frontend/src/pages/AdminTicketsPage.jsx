@@ -2,6 +2,8 @@ import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import { deleteAdminTicket, getAllTickets, updateTicketStatus, getAvailableTechnicians } from "../services/ticketApi";
+import { getAllUsers } from "../services/adminUserApi";
+import { getAllResources } from "../services/resourceApi";
 import {
   HiOutlinePencilSquare,
   HiOutlineEye,
@@ -51,6 +53,8 @@ function AdminTicketsPage() {
 
   // Available technicians for assignment dropdown
   const [availableTechnicians, setAvailableTechnicians] = useState([]);
+  const [userMap, setUserMap] = useState({});
+  const [resourceMap, setResourceMap] = useState({});
 
   const loadTickets = useCallback(async () => {
     try {
@@ -87,13 +91,32 @@ function AdminTicketsPage() {
     }
   }, [user?.role]);
 
+  const loadExtras = useCallback(async () => {
+    try {
+      const [usersRes, resourcesRes] = await Promise.all([
+        getAllUsers(),
+        getAllResources()
+      ]);
+      const nextUserMap = {};
+      (usersRes.data || []).forEach(u => nextUserMap[u.id] = u.name || u.email || u.id);
+      setUserMap(nextUserMap);
+
+      const nextResourceMap = {};
+      (resourcesRes.data || []).forEach(r => nextResourceMap[r.id] = r.name || r.id);
+      setResourceMap(nextResourceMap);
+    } catch {
+      // silently fail if user is not admin or fetch fails
+    }
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       void loadTickets();
       void loadTechnicians();
+      void loadExtras();
     }, 0);
     return () => clearTimeout(timer);
-  }, [loadTickets, loadTechnicians]);
+  }, [loadTickets, loadTechnicians, loadExtras]);
 
   const filteredTickets = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -331,16 +354,22 @@ function AdminTicketsPage() {
               {paginatedTickets.map((ticket) => (
                 <tr key={ticket.id} className="hover:bg-slate-50/80">
                   <td className="px-4 py-3 align-top">
-                    <p className="font-semibold text-slate-900">#{ticket.id}</p>
+                    <p className="font-semibold text-slate-900">
+                      #{ticket.id} <span className="font-normal text-slate-500">— {resourceMap[ticket.resourceId] || ticket.resourceId || "Unknown Resource"}</span>
+                    </p>
                     <p className="mt-1 max-w-xs truncate text-xs text-slate-500">{ticket.description}</p>
                   </td>
-                  <td className="px-4 py-3 text-slate-700">{ticket.reportedBy || "Unknown"}</td>
+                  <td className="px-4 py-3 text-slate-700">
+                    {ticket.reportedBy ? `${userMap[ticket.reportedBy] || "Unknown"} (${ticket.reportedBy})` : "Unknown"}
+                  </td>
                   <td className="px-4 py-3 text-slate-700">{ticket.priority || "N/A"}</td>
                   <td className="px-4 py-3 text-slate-700">{ticket.category || "N/A"}</td>
                   <td className="px-4 py-3">
                     <span className={`chip ${getTicketStatusClass(ticket.status)}`}>{ticket.status}</span>
                   </td>
-                  <td className="px-4 py-3 text-slate-700">{ticket.assignedTo || "-"}</td>
+                  <td className="px-4 py-3 text-slate-700">
+                    {ticket.assignedTo ? `${userMap[ticket.assignedTo] || "Unknown"} (${ticket.assignedTo})` : "-"}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <button

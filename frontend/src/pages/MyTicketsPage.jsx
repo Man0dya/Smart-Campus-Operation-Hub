@@ -5,6 +5,7 @@ import PaginationControls from "../components/common/PaginationControls";
 import StyledSelect from "../components/common/StyledSelect";
 import { cancelTicket, getMyTickets } from "../services/ticketApi";
 import { getAllResources } from "../services/resourceApi";
+import { Link } from "react-router-dom";
 
 const getTicketStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -252,11 +253,16 @@ function MyTicketsPage() {
                 </p>
               )}
 
-              {canCancel && (
-                <button className="btn-secondary" onClick={() => openCancelDialog(ticket.id)}>
-                  Cancel Ticket
-                </button>
-              )}
+              <div className="flex gap-2 pt-2">
+                <Link to={`/tickets/${ticket.id}`} className="btn-primary">
+                  View Ticket
+                </Link>
+                {canCancel && (
+                  <button className="btn-secondary" onClick={() => openCancelDialog(ticket.id)}>
+                    Cancel Ticket
+                  </button>
+                )}
+              </div>
             </article>
           );
         })}

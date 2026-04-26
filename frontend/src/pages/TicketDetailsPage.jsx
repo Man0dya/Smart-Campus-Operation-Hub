@@ -354,7 +354,7 @@ function TicketDetailsPage() {
       </section>
 
       {/* Add Comment Form */}
-      {ticket && ticket.status !== "CLOSED" && (
+      {ticket && ticket.status !== "CLOSED" && user?.role === "USER" && (
         <section className="panel max-w-2xl">
           <h3 className="mb-3 text-base font-semibold text-slate-900">{editingCommentId ? "Update Comment" : "Add Comment"}</h3>
           <div className="grid gap-3">
