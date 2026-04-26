@@ -175,7 +175,7 @@ class BookingServiceTest {
 
         when(bookingRepository.findById("b1")).thenReturn(java.util.Optional.of(existing));
 
-        bookingService.deleteBooking("b1", "admin-1");
+        bookingService.deleteBooking("b1", "admin-1", true);
 
         verify(bookingRepository).deleteById("b1");
     }
