@@ -3,6 +3,7 @@ import {
   getNotifications,
   markNotificationAsRead,
 } from "../services/notificationApi";
+import { Link } from "react-router-dom";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import PaginationControls from "../components/common/PaginationControls";
 import StyledSelect from "../components/common/StyledSelect";
@@ -141,11 +142,28 @@ function NotificationsPage() {
             <p className="text-sm text-slate-700">{notification.message}</p>
             <p className="mt-2 text-xs text-slate-500">{notification.createdAt}</p>
 
-            {!isNotificationRead(notification) && (
-              <button className="btn-secondary mt-3" onClick={() => handleMarkRead(notification.id)}>
-                Mark as Read
-              </button>
-            )}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {notification.type === "TICKET" && (() => {
+                const match = notification.message.match(/#([a-zA-Z0-9]+)/);
+                if (match && match[1]) {
+                  return (
+                    <Link
+                      to={`/tickets/${match[1]}`}
+                      className="btn-primary"
+                    >
+                      View Ticket
+                    </Link>
+                  );
+                }
+                return null;
+              })()}
+              
+              {!isNotificationRead(notification) && (
+                <button className="btn-secondary" onClick={() => handleMarkRead(notification.id)}>
+                  Mark as Read
+                </button>
+              )}
+            </div>
           </article>
         ))}
       </section>

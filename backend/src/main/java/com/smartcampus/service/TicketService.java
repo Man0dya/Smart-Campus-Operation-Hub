@@ -133,7 +133,8 @@ public class TicketService {
         }
 
         if (actor.getRole() == Role.ADMIN) {
-            if (!isBlank(assignedTo) && status != TicketStatus.IN_PROGRESS && status != TicketStatus.ASSIGNED) {
+            boolean isReassigning = !isBlank(assignedTo) && !assignedTo.trim().equals(ticket.getAssignedTo());
+            if (isReassigning && status != TicketStatus.IN_PROGRESS && status != TicketStatus.ASSIGNED) {
                 throw new IllegalArgumentException("Technician assignment is only allowed when status is ASSIGNED or IN_PROGRESS.");
             }
 

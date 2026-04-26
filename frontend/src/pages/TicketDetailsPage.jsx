@@ -354,38 +354,40 @@ function TicketDetailsPage() {
       </section>
 
       {/* Add Comment Form */}
-      <section className="panel max-w-2xl">
-        <h3 className="mb-3 text-base font-semibold text-slate-900">{editingCommentId ? "Update Comment" : "Add Comment"}</h3>
-        <div className="grid gap-3">
-          <textarea
-            className={`field min-h-24 ${commentError ? "border-rose-400 focus:border-rose-400" : ""}`}
-            value={commentText}
-            onChange={(e) => {
-              setCommentText(e.target.value);
-              if (commentError) setCommentError("");
-            }}
-            placeholder="Write a comment"
-            rows={3}
-          />
-          {commentError && <p className="mt-1 text-xs text-rose-600">{commentError}</p>}
-          <div className="flex gap-2">
-            <button className="btn-primary w-fit" onClick={handleSubmitComment}>
-              {editingCommentId ? "Update Comment" : "Add Comment"}
-            </button>
-            {editingCommentId && (
-              <button
-                className="btn-secondary w-fit"
-                onClick={() => {
-                  setCommentText("");
-                  setEditingCommentId("");
-                }}
-              >
-                Cancel Edit
+      {ticket && ticket.status !== "CLOSED" && (
+        <section className="panel max-w-2xl">
+          <h3 className="mb-3 text-base font-semibold text-slate-900">{editingCommentId ? "Update Comment" : "Add Comment"}</h3>
+          <div className="grid gap-3">
+            <textarea
+              className={`field min-h-24 ${commentError ? "border-rose-400 focus:border-rose-400" : ""}`}
+              value={commentText}
+              onChange={(e) => {
+                setCommentText(e.target.value);
+                if (commentError) setCommentError("");
+              }}
+              placeholder="Write a comment"
+              rows={3}
+            />
+            {commentError && <p className="mt-1 text-xs text-rose-600">{commentError}</p>}
+            <div className="flex gap-2">
+              <button className="btn-primary w-fit" onClick={handleSubmitComment}>
+                {editingCommentId ? "Update Comment" : "Add Comment"}
               </button>
-            )}
+              {editingCommentId && (
+                <button
+                  className="btn-secondary w-fit"
+                  onClick={() => {
+                    setCommentText("");
+                    setEditingCommentId("");
+                  }}
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </AuthenticatedLayout>
   );
 }

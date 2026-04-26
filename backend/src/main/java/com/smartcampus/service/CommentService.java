@@ -38,6 +38,10 @@ public class CommentService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + ticketId));
 
+        if (ticket.getStatus() == com.smartcampus.enums.TicketStatus.CLOSED) {
+            throw new com.smartcampus.exception.ConflictException("Cannot add comments to a closed ticket.");
+        }
+
         Comment comment = Comment.builder()
                 .ticketId(ticketId)
                 .userId(userId)
@@ -81,6 +85,13 @@ public class CommentService {
             throw new ForbiddenOperationException("You can only update your own comments.");
         }
 
+        Ticket ticket = ticketRepository.findById(comment.getTicketId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found."));
+
+        if (ticket.getStatus() == com.smartcampus.enums.TicketStatus.CLOSED) {
+            throw new com.smartcampus.exception.ConflictException("Cannot update comments on a closed ticket.");
+        }
+
         comment.setMessage(message);
         comment.setUpdatedAt(Instant.now().toString());
         return commentRepository.save(comment);
@@ -92,6 +103,13 @@ public class CommentService {
 
         if (!comment.getUserId().equals(userId)) {
             throw new ForbiddenOperationException("You can only delete your own comments.");
+        }
+
+        Ticket ticket = ticketRepository.findById(comment.getTicketId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found."));
+
+        if (ticket.getStatus() == com.smartcampus.enums.TicketStatus.CLOSED) {
+            throw new com.smartcampus.exception.ConflictException("Cannot delete comments from a closed ticket.");
         }
 
         commentRepository.delete(comment);
