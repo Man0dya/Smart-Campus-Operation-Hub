@@ -9,6 +9,7 @@ import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.UserRepository;
 import com.smartcampus.service.CurrentUserService;
+import com.smartcampus.service.NotificationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,13 +36,16 @@ public class AdminUserController {
     private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
 
     public AdminUserController(UserRepository userRepository,
                                CurrentUserService currentUserService,
-                               PasswordEncoder passwordEncoder) {
+                               PasswordEncoder passwordEncoder,
+                               NotificationService notificationService) {
         this.userRepository = userRepository;
         this.currentUserService = currentUserService;
         this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
     }
 
     @GetMapping
@@ -94,7 +98,14 @@ public class AdminUserController {
             user.setAvailable(true);
         }
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        notificationService.createNotification(
+                saved.getId(),
+                "Account created",
+                "Your account has been created by an administrator. You can sign in and start using the system.",
+                "USER"
+        );
+        return saved;
     }
 
     @PutMapping("/{id}")

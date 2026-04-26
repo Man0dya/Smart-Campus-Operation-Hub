@@ -110,7 +110,21 @@ public class BookingService {
         booking.setUpdatedAt(now);
         booking.setStatusChangedAt(now);
         booking.setStatusChangedBy(userId);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        notificationService.createNotification(
+            saved.getUserId(),
+            "Booking submitted",
+            "Your booking " + saved.getId() + " has been submitted and is waiting for approval.",
+            "BOOKING"
+        );
+        notificationService.notifyAllAdmins(
+            "New booking submitted",
+            "Booking " + saved.getId() + " was created by user " + saved.getUserId() + ".",
+            "BOOKING"
+        );
+
+        return saved;
     }
 
     public List<Booking> getAllBookings(BookingStatus status,

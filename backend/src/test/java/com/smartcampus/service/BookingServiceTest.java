@@ -52,13 +52,28 @@ class BookingServiceTest {
     @Test
     void createBooking_shouldSetPendingAndSave() {
         when(bookingRepository.findByResourceIdAndDate("res-1", "2026-05-10")).thenReturn(List.of());
-        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {
+            Booking booking = invocation.getArgument(0);
+            booking.setId("booking-1");
+            return booking;
+        });
 
         Booking saved = bookingService.createBooking(request, "user-1");
 
         assertEquals(BookingStatus.PENDING, saved.getStatus());
         assertEquals("user-1", saved.getStatusChangedBy());
         verify(bookingRepository).save(any(Booking.class));
+        verify(notificationService).createNotification(
+                "user-1",
+                "Booking submitted",
+                "Your booking booking-1 has been submitted and is waiting for approval.",
+                "BOOKING"
+        );
+        verify(notificationService).notifyAllAdmins(
+                "New booking submitted",
+                "Booking booking-1 was created by user user-1.",
+                "BOOKING"
+        );
     }
 
     @Test
