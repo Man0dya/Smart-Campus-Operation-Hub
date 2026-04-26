@@ -140,7 +140,7 @@ class TicketServiceTest {
 
         when(ticketRepository.findByStatusAndAssignedToIsNotNull(TicketStatus.IN_PROGRESS))
                 .thenReturn(List.of(inProgressTicket));
-        when(userRepository.findByRole(Role.TECHNICIAN)).thenReturn(List.of(availableTech, busyTech));
+        when(userRepository.findByRoleAndAvailableTrue(Role.TECHNICIAN)).thenReturn(List.of(availableTech, busyTech));
 
         List<User> technicians = ticketService.getAvailableTechnicians();
 
