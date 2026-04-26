@@ -69,6 +69,7 @@ function AdminBookingsPage() {
     inputPlaceholder: "",
     inputDefaultValue: "",
     inputRequired: false,
+    inputMaxLength: undefined,
     multilineInput: false,
   });
   const [searchQuery, setSearchQuery] = useState("");
@@ -186,6 +187,7 @@ function AdminBookingsPage() {
       inputPlaceholder: "Approved by admin",
       inputDefaultValue: "Approved by admin",
       inputRequired: false,
+      inputMaxLength: 300,
       multilineInput: false,
     });
   };
@@ -203,6 +205,7 @@ function AdminBookingsPage() {
       inputPlaceholder: "Enter a clear reason",
       inputDefaultValue: "",
       inputRequired: true,
+      inputMaxLength: 300,
       multilineInput: true,
     });
   };
@@ -220,6 +223,7 @@ function AdminBookingsPage() {
       inputPlaceholder: "",
       inputDefaultValue: "",
       inputRequired: false,
+      inputMaxLength: undefined,
       multilineInput: false,
     });
   };
@@ -237,6 +241,7 @@ function AdminBookingsPage() {
       inputPlaceholder: "",
       inputDefaultValue: "",
       inputRequired: false,
+      inputMaxLength: undefined,
       multilineInput: false,
     });
   };
@@ -433,6 +438,7 @@ function AdminBookingsPage() {
         inputPlaceholder={confirmDialog.inputPlaceholder}
         inputDefaultValue={confirmDialog.inputDefaultValue}
         inputRequired={confirmDialog.inputRequired}
+        inputMaxLength={confirmDialog.inputMaxLength}
         multilineInput={confirmDialog.multilineInput}
         onCancel={closeConfirmDialog}
         onConfirm={(inputValue) => void submitConfirmation(inputValue)}

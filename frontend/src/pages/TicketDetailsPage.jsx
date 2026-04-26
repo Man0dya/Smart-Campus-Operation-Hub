@@ -61,6 +61,8 @@ function TicketDetailsPage() {
   const [responseText, setResponseText] = useState("");
   const [responseLoading, setResponseLoading] = useState(false);
   const [error, setError] = useState("");
+  const [commentError, setCommentError] = useState("");
+  const [responseError, setResponseError] = useState("");
   const [commentFilter, setCommentFilter] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -87,7 +89,15 @@ function TicketDetailsPage() {
   }, [loadData]);
 
   const handleSubmitComment = async () => {
-    if (!commentText.trim()) return;
+    if (!commentText.trim()) {
+      setCommentError("Comment cannot be empty.");
+      return;
+    }
+    if (commentText.trim().length > 1500) {
+      setCommentError("Comment must be less than 1500 characters.");
+      return;
+    }
+    setCommentError("");
 
     try {
       if (editingCommentId) {
@@ -113,7 +123,15 @@ function TicketDetailsPage() {
   };
 
   const handleSubmitResponse = async () => {
-    if (!responseText.trim()) return;
+    if (!responseText.trim()) {
+      setResponseError("Response cannot be empty.");
+      return;
+    }
+    if (responseText.trim().length > 1500) {
+      setResponseError("Response must be less than 1500 characters.");
+      return;
+    }
+    setResponseError("");
 
     setResponseLoading(true);
     try {
@@ -221,12 +239,16 @@ function TicketDetailsPage() {
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="mb-2 text-sm font-semibold text-slate-900">Add response to ticket</p>
               <textarea
-                className="field min-h-24"
+                className={`field min-h-24 ${responseError ? "border-rose-400 focus:border-rose-400" : ""}`}
                 value={responseText}
-                onChange={(e) => setResponseText(e.target.value)}
+                onChange={(e) => {
+                  setResponseText(e.target.value);
+                  if (responseError) setResponseError("");
+                }}
                 placeholder="Write a response or update for the ticket requester"
                 rows={4}
               />
+              {responseError && <p className="mt-1 text-xs text-rose-600">{responseError}</p>}
               <div className="mt-3 flex gap-2">
                 <button
                   className="btn-primary"
@@ -336,12 +358,16 @@ function TicketDetailsPage() {
         <h3 className="mb-3 text-base font-semibold text-slate-900">{editingCommentId ? "Update Comment" : "Add Comment"}</h3>
         <div className="grid gap-3">
           <textarea
-            className="field min-h-24"
+            className={`field min-h-24 ${commentError ? "border-rose-400 focus:border-rose-400" : ""}`}
             value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
+            onChange={(e) => {
+              setCommentText(e.target.value);
+              if (commentError) setCommentError("");
+            }}
             placeholder="Write a comment"
             rows={3}
           />
+          {commentError && <p className="mt-1 text-xs text-rose-600">{commentError}</p>}
           <div className="flex gap-2">
             <button className="btn-primary w-fit" onClick={handleSubmitComment}>
               {editingCommentId ? "Update Comment" : "Add Comment"}

@@ -16,6 +16,7 @@ function ConfirmDialog({
   inputPlaceholder,
   inputDefaultValue = "",
   inputRequired = false,
+  inputMaxLength,
   multilineInput = false,
 }) {
   const [inputValue, setInputValue] = useState(inputDefaultValue);
@@ -76,6 +77,9 @@ function ConfirmDialog({
     if (inputRequired && !inputValue.trim()) {
       return;
     }
+    if (inputMaxLength && inputValue.trim().length > inputMaxLength) {
+      return;
+    }
     onConfirm?.(inputValue.trim());
   };
 
@@ -127,6 +131,9 @@ function ConfirmDialog({
             )}
             {inputRequired && !inputValue.trim() && (
               <p className="mt-1 text-xs text-rose-600">This field is required.</p>
+            )}
+            {inputMaxLength && inputValue.trim().length > inputMaxLength && (
+              <p className="mt-1 text-xs text-rose-600">Must be {inputMaxLength} characters or less.</p>
             )}
           </div>
         )}

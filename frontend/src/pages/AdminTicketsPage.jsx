@@ -47,6 +47,7 @@ function AdminTicketsPage() {
   const [activeTicketId, setActiveTicketId] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [formErrors, setFormErrors] = useState({});
 
   // Available technicians for assignment dropdown
   const [availableTechnicians, setAvailableTechnicians] = useState([]);
@@ -154,6 +155,7 @@ function AdminTicketsPage() {
   const openEditor = (ticketId) => {
     setActiveTicketId(ticketId);
     setDrawerOpen(true);
+    setFormErrors({});
     // Refresh available technicians for this ticket's category
     const ticket = tickets.find(t => t.id === ticketId);
     void loadTechnicians(ticket?.category);
@@ -161,6 +163,7 @@ function AdminTicketsPage() {
 
   const closeEditor = () => {
     setDrawerOpen(false);
+    setFormErrors({});
   };
 
   const closeConfirmDialog = () => {
@@ -178,11 +181,22 @@ function AdminTicketsPage() {
       return;
     }
 
+    const errors = {};
+    if (draft?.resolutionNotes && draft.resolutionNotes.trim().length > 1500) {
+      errors.resolutionNotes = "Resolution notes must be less than 1500 characters.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+
     try {
       await updateTicketStatus(activeTicketId, {
         status: draft.status,
         assignedTo: draft.assignedTo || undefined,
-        resolutionNotes: draft.resolutionNotes || undefined,
+        resolutionNotes: draft.resolutionNotes ? draft.resolutionNotes.trim() : undefined,
       });
       showToast(`Ticket ${activeTicketId} updated.`);
       setError("");
@@ -456,11 +470,15 @@ function AdminTicketsPage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Resolution Notes</label>
             <textarea
-              className="field min-h-24"
+              className={`field min-h-24 ${formErrors.resolutionNotes ? "border-rose-400 focus:border-rose-400" : ""}`}
               placeholder="Resolution notes"
               value={drafts[activeTicketId]?.resolutionNotes || ""}
-              onChange={(e) => setDraft(activeTicketId, "resolutionNotes", e.target.value)}
+              onChange={(e) => {
+                setDraft(activeTicketId, "resolutionNotes", e.target.value);
+                if (formErrors.resolutionNotes) setFormErrors({});
+              }}
             />
+            {formErrors.resolutionNotes && <p className="mt-1 text-xs text-rose-600">{formErrors.resolutionNotes}</p>}
           </div>
 
           <div className="flex items-center gap-2 pt-2">
