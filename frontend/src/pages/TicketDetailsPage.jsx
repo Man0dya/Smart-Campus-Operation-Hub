@@ -25,7 +25,7 @@ const getTicketStatusClass = (status) => {
   if (["RESOLVED", "CLOSED"].includes(normalized)) {
     return "chip-success";
   }
-  if (["OPEN", "IN_PROGRESS", "PENDING"].includes(normalized)) {
+  if (["OPEN", "ASSIGNED", "IN_PROGRESS", "PENDING"].includes(normalized)) {
     return "chip-warning";
   }
   if (["REJECTED", "CANCELLED", "CANCELED"].includes(normalized)) {

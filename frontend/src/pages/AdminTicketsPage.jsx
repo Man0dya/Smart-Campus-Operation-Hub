@@ -20,7 +20,7 @@ const getTicketStatusClass = (status) => {
   if (["RESOLVED", "CLOSED"].includes(normalized)) {
     return "chip-success";
   }
-  if (["OPEN", "IN_PROGRESS", "PENDING"].includes(normalized)) {
+  if (["OPEN", "ASSIGNED", "IN_PROGRESS", "PENDING"].includes(normalized)) {
     return "chip-warning";
   }
   if (["REJECTED", "CANCELLED", "CANCELED"].includes(normalized)) {
@@ -288,7 +288,9 @@ function AdminTicketsPage() {
           options={[
             { value: "ALL", label: "ALL" },
             { value: "OPEN", label: "OPEN" },
+            { value: "ASSIGNED", label: "ASSIGNED" },
             { value: "IN_PROGRESS", label: "IN_PROGRESS" },
+            { value: "RESOLVED", label: "RESOLVED" },
             { value: "CLOSED", label: "CLOSED" },
             { value: "REJECTED", label: "REJECTED" },
           ]}
@@ -428,7 +430,9 @@ function AdminTicketsPage() {
               onChange={(e) => setDraft(activeTicketId, "status", e.target.value)}
               options={[
                 { value: "OPEN", label: "OPEN" },
+                { value: "ASSIGNED", label: "ASSIGNED" },
                 { value: "IN_PROGRESS", label: "IN_PROGRESS" },
+                { value: "RESOLVED", label: "RESOLVED" },
                 { value: "CLOSED", label: "CLOSED" },
                 { value: "REJECTED", label: "REJECTED" },
               ]}

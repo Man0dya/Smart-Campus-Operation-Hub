@@ -127,19 +127,24 @@ public class TicketService {
                 throw new ForbiddenOperationException("Technician cannot reassign tickets.");
             }
 
-            if (!(ticket.getStatus() == TicketStatus.IN_PROGRESS && status == TicketStatus.CLOSED)) {
-                throw new ConflictException("Technician can only close an assigned IN_PROGRESS ticket.");
+            if (!(ticket.getStatus() == TicketStatus.IN_PROGRESS && status == TicketStatus.RESOLVED)) {
+                throw new ConflictException("Technician can only resolve an assigned IN_PROGRESS ticket.");
             }
         }
 
         if (actor.getRole() == Role.ADMIN) {
-            if (!isBlank(assignedTo) && status != TicketStatus.IN_PROGRESS) {
-                throw new IllegalArgumentException("Technician assignment is only allowed when status is IN_PROGRESS.");
+            if (!isBlank(assignedTo) && status != TicketStatus.IN_PROGRESS && status != TicketStatus.ASSIGNED) {
+                throw new IllegalArgumentException("Technician assignment is only allowed when status is ASSIGNED or IN_PROGRESS.");
             }
 
             String effectiveAssignedTo = !isBlank(assignedTo) ? assignedTo.trim() : ticket.getAssignedTo();
-            if (status == TicketStatus.IN_PROGRESS && isBlank(effectiveAssignedTo)) {
-                throw new IllegalArgumentException("Admin must assign a technician before moving ticket to IN_PROGRESS.");
+            if (status == TicketStatus.ASSIGNED && isBlank(effectiveAssignedTo)) {
+                throw new IllegalArgumentException("Admin must assign a technician when setting status to ASSIGNED.");
+            }
+
+            if (status == TicketStatus.OPEN) {
+                assignedTo = null; // Clear assignee if moving back to OPEN
+                ticket.setAssignedTo(null);
             }
 
             if (!isBlank(assignedTo)) {
@@ -160,9 +165,14 @@ public class TicketService {
         }
 
         TicketStatus previousStatus = ticket.getStatus();
+        String previousAssignedTo = ticket.getAssignedTo();
+
         ticket.setStatus(status);
 
-        if (!isBlank(assignedTo)) {
+        if (status == TicketStatus.OPEN) {
+            ticket.setAssignedTo(null);
+            assignedTo = null;
+        } else if (!isBlank(assignedTo)) {
             ticket.setAssignedTo(assignedTo.trim());
         }
 
@@ -176,6 +186,11 @@ public class TicketService {
         ticket.setStatusChangedBy(actor.getId());
 
         Ticket saved = ticketRepository.save(ticket);
+
+        // Free up technician availability if they are unassigned
+        if (status == TicketStatus.OPEN && previousAssignedTo != null) {
+            setTechnicianAvailability(previousAssignedTo, true);
+        }
 
         // ---- Notification & auto-comment pipeline based on transition ----
         handleStatusTransitionEffects(saved, previousStatus, status, assignedTo, resolutionNotes, actor);
@@ -240,52 +255,60 @@ public class TicketService {
         String ticketRef = "#" + ticket.getId();
 
         switch (to) {
-            case IN_PROGRESS -> {
-                // Assignment: Admin assigns a technician
-                if (assignedTo != null && !assignedTo.isBlank()) {
-                    String techName = resolveUserName(assignedTo);
-
-                    // Mark technician as unavailable
-                    setTechnicianAvailability(assignedTo, false);
-
-                    // Notify the assigned technician
-                    notificationService.createNotification(
-                            assignedTo,
-                            "Ticket Assigned to You",
-                            "You have been assigned to ticket " + ticketRef + ". Please review and resolve the issue.",
-                            "TICKET"
-                    );
-
-                    // Notify the reporter
-                    notificationService.createNotification(
-                            ticket.getReportedBy(),
-                            "Ticket Assigned",
-                            "Your ticket " + ticketRef + " has been assigned to technician " + techName + " and is now in progress.",
-                            "TICKET"
-                    );
-
-                    // System comment on the ticket
-                    createSystemComment(ticket.getId(), "SYSTEM",
-                            "\uD83D\uDD27 Ticket assigned to " + techName + " by " + actorName + ". Status changed to IN_PROGRESS.");
-                } else {
-                    // Status change without assignment
-                    notificationService.createNotification(
-                            ticket.getReportedBy(),
-                            "Ticket In Progress",
-                            "Your ticket " + ticketRef + " is now being worked on.",
-                            "TICKET"
-                    );
-
-                    createSystemComment(ticket.getId(), "SYSTEM",
-                            "\u2699\uFE0F Status changed to IN_PROGRESS by " + actorName + ".");
+            case OPEN -> {
+                if (from == TicketStatus.ASSIGNED || from == TicketStatus.IN_PROGRESS) {
+                    // ticket.getAssignedTo() might be null now because we cleared it. But wait, we should clear it AFTER this if we need it here, or use the 'assignedTo' passed in...
+                    // In updateTicketStatus, ticket.setAssignedTo(null) was already called. 
+                    // However, we don't have the old assignee ID easily. Let's just create a system comment.
+                    // Actually, let's just make sure the system comment is there.
+                    createSystemComment(ticket.getId(), "SYSTEM", "Ticket returned to OPEN by " + actorName + ".");
                 }
             }
 
-            case CLOSED -> {
-                // Technician marks ticket as done → ticket goes straight to CLOSED
+            case ASSIGNED -> {
+                if (assignedTo != null && !assignedTo.isBlank()) {
+                    String techName = resolveUserName(assignedTo);
+                    setTechnicianAvailability(assignedTo, false);
+                    notificationService.createNotification(assignedTo, "New Ticket Assigned", "You have been assigned to ticket " + ticketRef + ". Please accept or reject it.", "TICKET");
+                    notificationService.createNotification(ticket.getReportedBy(), "Ticket Assigned", "Your ticket " + ticketRef + " has been assigned to technician " + techName + " and is pending acceptance.", "TICKET");
+                    createSystemComment(ticket.getId(), "SYSTEM", "🔧 Ticket assigned to " + techName + " by " + actorName + " and is pending acceptance.");
+                }
+            }
+
+            case IN_PROGRESS -> {
+                // Technician accepted the ticket
+                notificationService.createNotification(ticket.getReportedBy(), "Ticket In Progress", "Your ticket " + ticketRef + " has been accepted and is now being worked on.", "TICKET");
+                createSystemComment(ticket.getId(), "SYSTEM", "⚙️ Ticket accepted. Status changed to IN_PROGRESS by " + actorName + ".");
+            }
+
+            case RESOLVED -> {
+                // Technician marks ticket as resolved
                 String notes = (resolutionNotes != null && !resolutionNotes.isBlank())
                         ? resolutionNotes.trim() : "";
 
+                // Notify the reporter
+                notificationService.createNotification(
+                        ticket.getReportedBy(),
+                        "Ticket Resolved",
+                        "Your ticket " + ticketRef + " has been resolved by " + actorName + "."
+                                + (notes.isEmpty() ? "" : " Resolution: " + notes),
+                        "TICKET"
+                );
+
+                // Notify all admins
+                notifyAllAdmins("Ticket Resolved",
+                        "Ticket " + ticketRef + " has been resolved by " + actorName + "."
+                                + (notes.isEmpty() ? "" : " Resolution: " + notes),
+                        "TICKET");
+
+                // System comment on the ticket
+                createSystemComment(ticket.getId(), "SYSTEM",
+                        "✅ Issue marked as RESOLVED by " + actorName + "."
+                                + (notes.isEmpty() ? "" : " Resolution: " + notes));
+            }
+
+            case CLOSED -> {
+                // Admin marks ticket as CLOSED
                 // Mark technician as available again
                 if (ticket.getAssignedTo() != null) {
                     setTechnicianAvailability(ticket.getAssignedTo(), true);
@@ -294,22 +317,14 @@ public class TicketService {
                 // Notify the reporter
                 notificationService.createNotification(
                         ticket.getReportedBy(),
-                        "Ticket Resolved & Closed",
-                        "Your ticket " + ticketRef + " has been fixed and closed by " + actorName + "."
-                                + (notes.isEmpty() ? "" : " Resolution: " + notes),
+                        "Ticket Closed",
+                        "Your ticket " + ticketRef + " has been verified and closed by " + actorName + ".",
                         "TICKET"
                 );
 
-                // Notify all admins
-                notifyAllAdmins("Ticket Closed",
-                        "Ticket " + ticketRef + " has been resolved and closed by " + actorName + "."
-                                + (notes.isEmpty() ? "" : " Resolution: " + notes),
-                        "TICKET");
-
                 // System comment on the ticket
                 createSystemComment(ticket.getId(), "SYSTEM",
-                        "\u2705 Issue resolved and ticket closed by " + actorName + "."
-                                + (notes.isEmpty() ? "" : " Resolution: " + notes));
+                        "🔒 Ticket closed by " + actorName + ".");
             }
 
             case REJECTED -> {
@@ -444,13 +459,13 @@ public class TicketService {
     }
 
     public List<User> getAvailableTechnicians() {
-        Set<String> busyTechnicianIds = ticketRepository.findByStatusAndAssignedToIsNotNull(TicketStatus.IN_PROGRESS)
-            .stream()
+        Set<String> busyTechnicianIds = ticketRepository.findAll().stream()
+            .filter(t -> (t.getStatus() == TicketStatus.IN_PROGRESS || t.getStatus() == TicketStatus.ASSIGNED) && t.getAssignedTo() != null)
             .map(Ticket::getAssignedTo)
-            .filter(assignedUserId -> assignedUserId != null && !assignedUserId.isBlank())
             .collect(Collectors.toSet());
 
-        return userRepository.findByRoleAndAvailableTrue(Role.TECHNICIAN).stream()
+        return userRepository.findByRole(Role.TECHNICIAN).stream()
+            .filter(User::isAvailable)
             .filter(technician -> !busyTechnicianIds.contains(technician.getId()))
             .toList();
     }
@@ -460,15 +475,14 @@ public class TicketService {
             return getAvailableTechnicians();
         }
 
-        Set<String> busyTechnicianIds = ticketRepository.findByStatusAndAssignedToIsNotNull(TicketStatus.IN_PROGRESS)
-            .stream()
+        Set<String> busyTechnicianIds = ticketRepository.findAll().stream()
+            .filter(t -> (t.getStatus() == TicketStatus.IN_PROGRESS || t.getStatus() == TicketStatus.ASSIGNED) && t.getAssignedTo() != null)
             .map(Ticket::getAssignedTo)
-            .filter(assignedUserId -> assignedUserId != null && !assignedUserId.isBlank())
             .collect(Collectors.toSet());
 
-        return userRepository.findByRoleAndAvailableTrue(Role.TECHNICIAN).stream()
+        return userRepository.findByRole(Role.TECHNICIAN).stream()
+            .filter(User::isAvailable)
             .filter(technician -> !busyTechnicianIds.contains(technician.getId()))
-            .filter(technician -> hasMatchingSkillForCategory(technician, category.trim()))
             .sorted((t1, t2) -> Integer.compare(getSkillScore(t2, category.trim()), getSkillScore(t1, category.trim())))
             .toList();
     }
@@ -523,8 +537,9 @@ public class TicketService {
 
     private boolean isValidTransition(TicketStatus current, TicketStatus next) {
         return switch (current) {
-            case OPEN -> next == TicketStatus.IN_PROGRESS || next == TicketStatus.REJECTED;
-            case IN_PROGRESS -> next == TicketStatus.CLOSED || next == TicketStatus.REJECTED;
+            case OPEN -> next == TicketStatus.ASSIGNED || next == TicketStatus.REJECTED;
+            case ASSIGNED -> next == TicketStatus.IN_PROGRESS || next == TicketStatus.OPEN || next == TicketStatus.REJECTED;
+            case IN_PROGRESS -> next == TicketStatus.RESOLVED || next == TicketStatus.REJECTED;
             case RESOLVED -> next == TicketStatus.CLOSED;
             case CLOSED, REJECTED, CANCELLED -> false;
         };
@@ -596,5 +611,54 @@ public class TicketService {
         for (User admin : admins) {
             notificationService.createNotification(admin.getId(), title, message, type);
         }
+    }
+
+    public Ticket acceptTicket(String ticketId, User technician) {
+        Ticket ticket = getTicketById(ticketId);
+        if (ticket.getStatus() != TicketStatus.ASSIGNED) {
+            throw new ConflictException("Ticket is not in ASSIGNED state.");
+        }
+        if (!technician.getId().equals(ticket.getAssignedTo())) {
+            throw new ForbiddenOperationException("Only the assigned technician can accept this ticket.");
+        }
+        
+        ticket.setStatus(TicketStatus.IN_PROGRESS);
+        String now = Instant.now().toString();
+        ticket.setUpdatedAt(now);
+        ticket.setStatusChangedAt(now);
+        ticket.setStatusChangedBy(technician.getId());
+        
+        Ticket saved = ticketRepository.save(ticket);
+        
+        createSystemComment(saved.getId(), "SYSTEM", "✅ Technician accepted the ticket. Status changed to IN_PROGRESS.");
+        notificationService.createNotification(ticket.getReportedBy(), "Ticket In Progress", "Your ticket has been accepted by the technician and is now in progress.", "TICKET");
+        
+        return saved;
+    }
+
+    public Ticket rejectTicketAssignment(String ticketId, String reason, User technician) {
+        Ticket ticket = getTicketById(ticketId);
+        if (ticket.getStatus() != TicketStatus.ASSIGNED) {
+            throw new ConflictException("Ticket is not in ASSIGNED state.");
+        }
+        if (!technician.getId().equals(ticket.getAssignedTo())) {
+            throw new ForbiddenOperationException("Only the assigned technician can reject this ticket.");
+        }
+        
+        ticket.setStatus(TicketStatus.OPEN);
+        ticket.setAssignedTo(null);
+        String now = Instant.now().toString();
+        ticket.setUpdatedAt(now);
+        ticket.setStatusChangedAt(now);
+        ticket.setStatusChangedBy(technician.getId());
+        
+        Ticket saved = ticketRepository.save(ticket);
+        
+        notifyAllAdmins("Technician Rejected Ticket", "Technician rejected ticket #" + ticketId + " with reason: " + reason, "TICKET");
+        createSystemComment(saved.getId(), "SYSTEM", "❌ Technician rejected the assignment. Reason: " + reason + ". Ticket returned to OPEN.");
+        
+        setTechnicianAvailability(technician.getId(), true);
+        
+        return saved;
     }
 }
