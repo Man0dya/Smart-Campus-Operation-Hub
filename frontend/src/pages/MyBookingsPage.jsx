@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { cancelBooking, getMyBookings } from "../services/bookingApi";
+import { cancelBooking, deleteBooking, getMyBookings } from "../services/bookingApi";
 import { getAllResources } from "../services/resourceApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import PaginationControls from "../components/common/PaginationControls";
@@ -30,7 +30,7 @@ function MyBookingsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, bookingId: "" });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, bookingId: "", action: "" });
 
   const loadBookings = useCallback(async () => {
     try {
@@ -83,19 +83,37 @@ function MyBookingsPage() {
     }
   };
 
+  const handleDelete = async (bookingId) => {
+    try {
+      await deleteBooking(bookingId);
+      await loadBookings();
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to delete booking.");
+    }
+  };
+
+  const openDeleteDialog = (bookingId) => {
+    setConfirmDialog({ open: true, bookingId, action: "delete" });
+  };
+
   const openCancelDialog = (bookingId) => {
-    setConfirmDialog({ open: true, bookingId });
+    setConfirmDialog({ open: true, bookingId, action: "cancel" });
   };
 
   const closeCancelDialog = () => {
-    setConfirmDialog({ open: false, bookingId: "" });
+    setConfirmDialog({ open: false, bookingId: "", action: "" });
   };
 
   const handleConfirmCancel = async (reason) => {
-    const bookingId = confirmDialog.bookingId;
+    const { bookingId, action } = confirmDialog;
     closeCancelDialog();
 
     if (!bookingId) {
+      return;
+    }
+
+    if (action === "delete") {
+      await handleDelete(bookingId);
       return;
     }
 
@@ -200,7 +218,13 @@ function MyBookingsPage() {
               </p>
             )}
 
-            {booking.status && ["PENDING", "APPROVED"].includes(String(booking.status).toUpperCase()) && (
+            {booking.status && String(booking.status).toUpperCase() === "PENDING" && (
+              <button className="btn-secondary" onClick={() => openDeleteDialog(booking.id)}>
+                Delete Booking
+              </button>
+            )}
+
+            {booking.status && String(booking.status).toUpperCase() === "APPROVED" && (
               <button className="btn-secondary" onClick={() => openCancelDialog(booking.id)}>
                 Cancel Booking
               </button>
@@ -211,13 +235,17 @@ function MyBookingsPage() {
 
       <ConfirmDialog
         open={confirmDialog.open}
-        title="Cancel Booking?"
-        description="Are you sure you want to cancel this booking? This action cannot be undone."
-        inputLabel="Reason (optional)"
-        inputPlaceholder="Add a short reason for cancelling"
-        multilineInput
-        confirmText="Yes, Cancel"
-        cancelText="Keep Booking"
+        title={confirmDialog.action === "delete" ? "Delete Booking?" : "Cancel Booking?"}
+        description={
+          confirmDialog.action === "delete"
+            ? "Are you sure you want to delete this pending booking? This action cannot be undone."
+            : "Are you sure you want to cancel this booking? This action cannot be undone."
+        }
+        inputLabel={confirmDialog.action === "delete" ? "" : "Reason (optional)"}
+        inputPlaceholder={confirmDialog.action === "delete" ? "" : "Add a short reason for cancelling"}
+        multilineInput={confirmDialog.action !== "delete"}
+        confirmText={confirmDialog.action === "delete" ? "Yes, Delete" : "Yes, Cancel"}
+        cancelText={confirmDialog.action === "delete" ? "Keep Booking" : "Keep Booking"}
         onCancel={closeCancelDialog}
         onConfirm={handleConfirmCancel}
       />
