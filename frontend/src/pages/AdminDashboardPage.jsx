@@ -6,7 +6,7 @@ import { getAllTickets } from "../services/ticketApi";
 import { getAllResources } from "../services/resourceApi";
 import { getAllUsers } from "../services/adminUserApi";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import {
   HiOutlineClipboardDocumentList,
   HiOutlineWrenchScrewdriver,
@@ -130,7 +130,7 @@ function AdminDashboardPage() {
       const doc = new jsPDF();
       doc.text(title, 14, 15);
       const tableData = rawData.map(row => headers.map(h => String(row[h] || '')));
-      doc.autoTable({
+      autoTable(doc, {
         head: [headers],
         body: tableData,
         startY: 20,
