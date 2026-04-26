@@ -6,7 +6,6 @@ import {
   getAllUsers,
   updateAdminUser,
 } from "../services/adminUserApi";
-import { verifyTechnicianSkill } from "../services/userApi";
 import {
   HiOutlineArrowPath,
   HiOutlinePlus,
@@ -53,8 +52,6 @@ function AdminUsersPage() {
   const [pageSize, setPageSize] = useState(10);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, userId: "" });
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
-  const [skillsModalOpen, setSkillsModalOpen] = useState(false);
-  const [selectedTechnician, setSelectedTechnician] = useState(null);
   const [formErrors, setFormErrors] = useState({});
 
   const validateForm = () => {
@@ -74,25 +71,6 @@ function AdminUsersPage() {
     }
 
     return newErrors;
-  };
-
-  const handleVerifySkill = async (userId, skillName, verified) => {
-    try {
-      await verifyTechnicianSkill(userId, skillName, verified);
-      showToast(`Skill ${verified ? 'verified' : 'unverified'} successfully.`);
-      await loadUsers();
-      // Update selected technician if modal is open
-      if (selectedTechnician && selectedTechnician.id === userId) {
-        setSelectedTechnician(users.find(u => u.id === userId));
-      }
-    } catch (err) {
-      showToast("Failed to update skill verification.", "danger");
-    }
-  };
-
-  const openSkillsModal = (technician) => {
-    setSelectedTechnician(technician);
-    setSkillsModalOpen(true);
   };
 
   const loadUsers = useCallback(async () => {
@@ -309,16 +287,6 @@ function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      {user.role === "TECHNICIAN" && (
-                        <button
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-                          onClick={() => openSkillsModal(user)}
-                          title="Manage skills"
-                          aria-label="Manage skills"
-                        >
-                          <span className="text-sm font-semibold">⚡</span>
-                        </button>
-                      )}
                       <button
                         className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
                         onClick={() => openEditDrawer(user)}
@@ -468,67 +436,6 @@ function AdminUsersPage() {
         type={toast.type}
         onClose={() => setToast((prev) => ({ ...prev, open: false }))}
       />
-
-      {/* Skills Verification Modal */}
-      {skillsModalOpen && selectedTechnician && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Manage Skills - {selectedTechnician.name}
-              </h3>
-              <button
-                onClick={() => setSkillsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <HiOutlineXMark className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {selectedTechnician.skills && selectedTechnician.skills.length > 0 ? (
-                selectedTechnician.skills.map((skill, index) => (
-                  <div key={index} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-slate-900">{skill.name}</h4>
-                        <p className="text-sm text-slate-600">
-                          Category: {skill.category?.replace('_', ' ')} | Level: {skill.level}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {skill.verified ? (
-                          <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                            ✓ Verified
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
-                            Pending
-                          </span>
-                        )}
-                        <button
-                          onClick={() => handleVerifySkill(selectedTechnician.id, skill.name, !skill.verified)}
-                          className={`rounded px-3 py-1 text-sm font-medium ${
-                            skill.verified
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          }`}
-                        >
-                          {skill.verified ? 'Unverify' : 'Verify'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-slate-500 py-8">
-                  No skills registered by this technician.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </AuthenticatedLayout>
   );
 }

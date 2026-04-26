@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import LandingPage from "../pages/LandingPage";
 import LoginPage from "../pages/LoginPage";
 import DashboardPage from "../pages/DashboardPage";
 import ResourcesPage from "../pages/ResourcesPage";
@@ -22,7 +23,8 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LoginPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
         <Route
           path="/dashboard"

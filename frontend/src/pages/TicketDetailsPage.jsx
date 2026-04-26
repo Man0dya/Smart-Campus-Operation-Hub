@@ -15,6 +15,7 @@ import {
   HiOutlineCog6Tooth,
   HiOutlinePencilSquare,
   HiOutlineTrash,
+  HiOutlineDocumentText,
 } from "react-icons/hi2";
 
 const apiOrigin = import.meta.env.VITE_API_ORIGIN || "http://localhost:8080";
@@ -200,25 +201,30 @@ function TicketDetailsPage() {
 
           {ticket.attachments?.length > 0 && (
             <div>
-              <p className="mb-1 text-sm font-medium text-slate-800">Attachments</p>
-              <ul className="list-inside list-disc space-y-1 text-sm text-cyan-700">
-                {ticket.attachments.map((attachment) => (
-                  <li key={attachment.publicId ?? attachment.fileUrl ?? attachment.fileName}>
-                    <a
-                      href={
-                        attachment.fileUrl?.startsWith("http")
-                          ? attachment.fileUrl
-                          : `${apiOrigin}${attachment.fileUrl}`
-                      }
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hover:underline"
-                    >
-                      {attachment.fileName ?? "Attachment"}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <p className="mb-2 text-sm font-medium text-slate-800">Attachments</p>
+              <div className="flex flex-wrap gap-4">
+                {ticket.attachments.map((attachment) => {
+                  const url = attachment.fileUrl?.startsWith("http")
+                    ? attachment.fileUrl
+                    : `${apiOrigin}${attachment.fileUrl}`;
+                  const isImage = url.match(/\.(jpeg|jpg|gif|png|webp)$/i) || attachment.fileName?.match(/\.(jpeg|jpg|gif|png|webp)$/i);
+                  
+                  return (
+                    <div key={attachment.publicId ?? attachment.fileUrl ?? attachment.fileName} className="relative group">
+                      {isImage ? (
+                        <a href={url} target="_blank" rel="noreferrer" className="block w-40 h-40 overflow-hidden rounded-lg border border-slate-200">
+                          <img src={url} alt={attachment.fileName ?? "Attachment"} className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" />
+                        </a>
+                      ) : (
+                        <a href={url} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center w-40 h-40 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors p-4 text-center">
+                          <HiOutlineDocumentText className="h-8 w-8 text-slate-400 mb-2" />
+                          <span className="text-xs text-cyan-700 hover:underline break-all line-clamp-2">{attachment.fileName ?? "Attachment"}</span>
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

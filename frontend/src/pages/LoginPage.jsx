@@ -193,12 +193,14 @@ function LoginPage() {
   return (
     <div className="min-h-screen w-full bg-slate-100">
       <div className="grid min-h-screen w-full overflow-hidden bg-white md:grid-cols-[1.15fr_1fr]">
-        <section className="relative border-b border-slate-200 bg-slate-900 p-7 text-slate-100 md:border-b-0 md:border-r md:border-slate-800 md:p-12">
-          <div className="absolute -right-16 top-12 h-52 w-52 rounded-full bg-sky-400/10 blur-2xl" />
-          <div className="absolute -bottom-14 left-10 h-44 w-44 rounded-full bg-indigo-300/10 blur-2xl" />
+        <section className="relative border-b border-slate-200 bg-slate-900 p-7 text-slate-100 md:border-b-0 md:border-r md:border-slate-800 md:p-12 overflow-hidden flex flex-col justify-end">
+          <div className="absolute inset-0">
+            <img src="/campus-login-bg.png" alt="Campus Background" className="h-full w-full object-cover opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-slate-900/10"></div>
+          </div>
 
           <div className="relative space-y-6 fade-up">
-            <p className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-200">
+            <p className="inline-flex items-center rounded-full border border-slate-500/50 bg-slate-900/60 backdrop-blur-md px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-200">
               Smart Campus Hub
             </p>
 
@@ -208,20 +210,23 @@ function LoginPage() {
                 <br />
                 one secure login.
               </h1>
-              <p className="mt-3 text-sm leading-relaxed text-slate-300 md:text-base">
+              <p className="mt-3 text-sm leading-relaxed text-slate-300 md:text-base max-w-md">
                 Access bookings, maintenance workflows, and notifications with role-aware controls for students,
                 technicians, and administrators.
               </p>
             </div>
 
             <div className="grid gap-3 text-sm text-slate-200">
-              <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2.5">
+              <div className="rounded-xl border border-slate-600/50 bg-slate-900/50 backdrop-blur-md px-3 py-2.5 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
                 OAuth with Google and secure local account login
               </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2.5">
+              <div className="rounded-xl border border-slate-600/50 bg-slate-900/50 backdrop-blur-md px-3 py-2.5 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
                 Role-based destinations: USER, TECHNICIAN, ADMIN
               </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2.5">
+              <div className="rounded-xl border border-slate-600/50 bg-slate-900/50 backdrop-blur-md px-3 py-2.5 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
                 Centralized access to resources, bookings, and tickets
               </div>
             </div>
