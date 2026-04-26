@@ -97,7 +97,7 @@ class TicketServiceTest {
     }
 
     @Test
-    void updateTicketStatus_shouldRequireAssigneeWhenAdminMovesToInProgress() {
+    void updateTicketStatus_shouldRequireAssigneeWhenAdminMovesToAssigned() {
         User actor = User.builder().id("admin-1").role(Role.ADMIN).build();
         Ticket ticket = Ticket.builder()
                 .id("t1")
@@ -108,7 +108,7 @@ class TicketServiceTest {
         when(ticketRepository.findById("t1")).thenReturn(Optional.of(ticket));
 
         assertThrows(IllegalArgumentException.class, () ->
-                ticketService.updateTicketStatus("t1", TicketStatus.IN_PROGRESS, null, null, actor, true));
+                ticketService.updateTicketStatus("t1", TicketStatus.ASSIGNED, null, null, actor, true));
     }
 
     @Test
@@ -129,8 +129,8 @@ class TicketServiceTest {
 
     @Test
     void getAvailableTechnicians_shouldExcludeOnlyTechniciansWithInProgressAssignments() {
-        User availableTech = User.builder().id("tech-1").role(Role.TECHNICIAN).build();
-        User busyTech = User.builder().id("tech-2").role(Role.TECHNICIAN).build();
+        User availableTech = User.builder().id("tech-1").role(Role.TECHNICIAN).available(true).build();
+        User busyTech = User.builder().id("tech-2").role(Role.TECHNICIAN).available(true).build();
 
         Ticket inProgressTicket = Ticket.builder()
                 .id("t1")
@@ -138,9 +138,8 @@ class TicketServiceTest {
                 .assignedTo("tech-2")
                 .build();
 
-        when(ticketRepository.findByStatusAndAssignedToIsNotNull(TicketStatus.IN_PROGRESS))
-                .thenReturn(List.of(inProgressTicket));
-        when(userRepository.findByRoleAndAvailableTrue(Role.TECHNICIAN)).thenReturn(List.of(availableTech, busyTech));
+        when(ticketRepository.findAll()).thenReturn(List.of(inProgressTicket));
+        when(userRepository.findByRole(Role.TECHNICIAN)).thenReturn(List.of(availableTech, busyTech));
 
         List<User> technicians = ticketService.getAvailableTechnicians();
 
