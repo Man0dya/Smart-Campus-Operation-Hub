@@ -428,14 +428,21 @@ function AdminTicketsPage() {
               name="status"
               value={drafts[activeTicketId]?.status || activeTicket?.status || "OPEN"}
               onChange={(e) => setDraft(activeTicketId, "status", e.target.value)}
-              options={[
-                { value: "OPEN", label: "OPEN" },
-                { value: "ASSIGNED", label: "ASSIGNED" },
-                { value: "IN_PROGRESS", label: "IN_PROGRESS" },
-                { value: "RESOLVED", label: "RESOLVED" },
-                { value: "CLOSED", label: "CLOSED" },
-                { value: "REJECTED", label: "REJECTED" },
-              ]}
+              options={
+                activeTicket?.status === "RESOLVED"
+                  ? [
+                      { value: "RESOLVED", label: "RESOLVED" },
+                      { value: "CLOSED", label: "CLOSED" }
+                    ]
+                  : [
+                      { value: "OPEN", label: "OPEN" },
+                      { value: "ASSIGNED", label: "ASSIGNED" },
+                      { value: "IN_PROGRESS", label: "IN_PROGRESS" },
+                      { value: "RESOLVED", label: "RESOLVED" },
+                      { value: "CLOSED", label: "CLOSED" },
+                      { value: "REJECTED", label: "REJECTED" },
+                    ]
+              }
             />
           </div>
 
@@ -454,6 +461,7 @@ function AdminTicketsPage() {
                 value={drafts[activeTicketId]?.assignedTo || ""}
                 onChange={(e) => setDraft(activeTicketId, "assignedTo", e.target.value)}
                 options={technicianOptions}
+                disabled={activeTicket?.status === "RESOLVED"}
               />
             ) : (
               <input
@@ -481,6 +489,7 @@ function AdminTicketsPage() {
                 setDraft(activeTicketId, "resolutionNotes", e.target.value);
                 if (formErrors.resolutionNotes) setFormErrors({});
               }}
+              disabled={activeTicket?.status === "RESOLVED"}
             />
             {formErrors.resolutionNotes && <p className="mt-1 text-xs text-rose-600">{formErrors.resolutionNotes}</p>}
           </div>
