@@ -73,7 +73,33 @@ function AuthenticatedLayout({ title, subtitle, children }) {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [dismissedPopupNotificationIds, setDismissedPopupNotificationIds] = useState([]);
+  const [dismissedPopupNotificationIds, setDismissedPopupNotificationIds] = useState(() => {
+    if (user?.id) {
+      try {
+        const stored = localStorage.getItem(`dismissed_notifications_${user.id}`);
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (user?.id) {
+      try {
+        localStorage.setItem(
+          `dismissed_notifications_${user.id}`,
+          JSON.stringify(dismissedPopupNotificationIds)
+        );
+      } catch (err) {
+        // ignore
+      }
+    }
+  }, [dismissedPopupNotificationIds, user?.id]);
+
   const notificationRef = useRef(null);
 
   const sidebarNavItems = useMemo(() => {
