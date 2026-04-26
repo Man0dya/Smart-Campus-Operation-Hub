@@ -6,6 +6,8 @@ import {
   cancelBooking,
   deleteAdminBooking,
 } from "../services/bookingApi";
+import { getAllUsers } from "../services/adminUserApi";
+import { getAllResources } from "../services/resourceApi";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
 import {
   HiOutlineCheckCircle,
@@ -55,6 +57,8 @@ const getLockedAction = (status) => {
 
 function AdminBookingsPage() {
   const [bookings, setBookings] = useState([]);
+  const [resourceNameById, setResourceNameById] = useState({});
+  const [userNameById, setUserNameById] = useState({});
   const [error, setError] = useState("");
   const [toast, setToast] = useState({ open: false, message: "", type: "success" });
   const [confirmDialog, setConfirmDialog] = useState({
@@ -94,6 +98,56 @@ function AdminBookingsPage() {
       setError(err?.response?.data?.error || "Failed to load bookings. Admin role required.");
     }
   }, []);
+
+  useEffect(() => {
+    const loadResources = async () => {
+      try {
+        const res = await getAllResources();
+        const resources = Array.isArray(res.data) ? res.data : [];
+        const nextMap = resources.reduce((accumulator, resource) => {
+          if (resource?.id) {
+            accumulator[resource.id] = resource.name || resource.id;
+          }
+          return accumulator;
+        }, {});
+        setResourceNameById(nextMap);
+      } catch {
+        setResourceNameById({});
+      }
+    };
+
+    void loadResources();
+  }, []);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const res = await getAllUsers();
+        const users = Array.isArray(res.data) ? res.data : [];
+        const nextMap = users.reduce((accumulator, user) => {
+          if (user?.id) {
+            accumulator[user.id] = user.name || user.email || user.id;
+          }
+          return accumulator;
+        }, {});
+        setUserNameById(nextMap);
+      } catch {
+        setUserNameById({});
+      }
+    };
+
+    void loadUsers();
+  }, []);
+
+  const getResourceName = useCallback(
+    (resourceId) => resourceNameById[resourceId] || resourceId || "Unknown Resource",
+    [resourceNameById]
+  );
+
+  const getUserName = useCallback(
+    (userId) => userNameById[userId] || userId || "Unknown User",
+    [userNameById]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -258,6 +312,8 @@ function AdminBookingsPage() {
       }
 
       const haystack = [
+        getResourceName(booking.resourceId),
+        getUserName(booking.userId),
         booking.resourceId,
         booking.userId,
         booking.date,
@@ -271,7 +327,7 @@ function AdminBookingsPage() {
 
       return matchesStatus && haystack.includes(query);
     });
-  }, [bookings, searchQuery, statusFilter]);
+  }, [bookings, searchQuery, statusFilter, getResourceName, getUserName]);
 
   useEffect(() => {
     setPage(1);
@@ -341,8 +397,14 @@ function AdminBookingsPage() {
 
                     return (
                       <>
-                  <td className="px-4 py-3 font-semibold text-slate-900">{booking.resourceId}</td>
-                  <td className="px-4 py-3 text-slate-700">{booking.userId}</td>
+                  <td className="px-4 py-3 text-slate-900">
+                    <div className="font-semibold">{getResourceName(booking.resourceId)}</div>
+                    <div className="text-xs text-slate-500">{booking.resourceId}</div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">
+                    <div className="font-medium text-slate-900">{getUserName(booking.userId)}</div>
+                    <div className="text-xs text-slate-500">{booking.userId}</div>
+                  </td>
                   <td className="px-4 py-3 text-slate-700">{booking.date}</td>
                   <td className="px-4 py-3 text-slate-700">{booking.startTime} - {booking.endTime}</td>
                   <td className="px-4 py-3">
