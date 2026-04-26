@@ -12,7 +12,7 @@ const getTicketStatusClass = (status) => {
   if (["RESOLVED", "CLOSED"].includes(normalized)) {
     return "chip-success";
   }
-  if (["OPEN", "IN_PROGRESS", "PENDING"].includes(normalized)) {
+  if (["OPEN", "ASSIGNED", "IN_PROGRESS", "PENDING"].includes(normalized)) {
     return "chip-warning";
   }
   if (["REJECTED", "CANCELLED", "CANCELED"].includes(normalized)) {
@@ -200,6 +200,7 @@ function MyTicketsPage() {
           options={[
             { value: "ALL", label: "All Statuses" },
             { value: "OPEN", label: "OPEN" },
+            { value: "ASSIGNED", label: "ASSIGNED" },
             { value: "IN_PROGRESS", label: "IN_PROGRESS" },
             { value: "RESOLVED", label: "RESOLVED" },
             { value: "CLOSED", label: "CLOSED" },

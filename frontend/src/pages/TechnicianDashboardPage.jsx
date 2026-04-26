@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthenticatedLayout from "../components/common/AuthenticatedLayout";
-import { getAssignedTickets, updateTicketStatus } from "../services/ticketApi";
+import { getAssignedTickets, updateTicketStatus, acceptTicket, rejectTicket } from "../services/ticketApi";
 import { updateMyAvailability } from "../services/userApi";
 import {
   HiOutlineEye,
@@ -19,7 +19,7 @@ import FloatingToast from "../components/common/FloatingToast";
 const getTicketStatusClass = (status) => {
   const normalized = String(status || "").toUpperCase();
   if (["RESOLVED", "CLOSED"].includes(normalized)) return "chip-success";
-  if (["OPEN", "IN_PROGRESS", "PENDING"].includes(normalized)) return "chip-warning";
+  if (["OPEN", "ASSIGNED", "IN_PROGRESS", "PENDING"].includes(normalized)) return "chip-warning";
   if (["REJECTED", "CANCELLED", "CANCELED"].includes(normalized)) return "chip-danger";
   return "chip-neutral";
 };
@@ -63,6 +63,11 @@ function TechnicianDashboardPage() {
   const [resolveModal, setResolveModal] = useState({ open: false, ticketId: "" });
   const [resolutionNotes, setResolutionNotes] = useState("");
   const [resolving, setResolving] = useState(false);
+
+  // Reject modal state
+  const [rejectModal, setRejectModal] = useState({ open: false, ticketId: "" });
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ open: true, message, type });
@@ -139,14 +144,53 @@ function TechnicianDashboardPage() {
     return filteredTickets.slice(start, start + pageSize);
   }, [filteredTickets, page, pageSize]);
 
-  // Stats
   const stats = useMemo(() => {
     const total = tickets.length;
     const inProgress = tickets.filter((t) => t.status === "IN_PROGRESS").length;
-    const resolved = tickets.filter((t) => t.status === "CLOSED").length;
-    const pending = tickets.filter((t) => t.status === "OPEN").length;
-    return { total, inProgress, resolved, pending };
+    const resolved = tickets.filter((t) => ["RESOLVED", "CLOSED"].includes(t.status)).length;
+    const pendingAccept = tickets.filter((t) => t.status === "ASSIGNED").length;
+    return { total, inProgress, resolved, pendingAccept };
   }, [tickets]);
+
+  const handleAccept = async (ticketId) => {
+    try {
+      await acceptTicket(ticketId);
+      showToast(`Ticket #${ticketId} accepted and is now in progress.`);
+      await loadTickets();
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to accept ticket.");
+    }
+  };
+
+  const openRejectModal = (ticketId) => {
+    setRejectModal({ open: true, ticketId });
+    setRejectReason("");
+  };
+
+  const closeRejectModal = () => {
+    setRejectModal({ open: false, ticketId: "" });
+    setRejectReason("");
+    setRejecting(false);
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) {
+      setError("Please provide a reason for rejecting the assignment.");
+      return;
+    }
+
+    setRejecting(true);
+    try {
+      await rejectTicket(rejectModal.ticketId, { response: rejectReason.trim() });
+      showToast(`Ticket #${rejectModal.ticketId} assignment rejected.`);
+      setError("");
+      closeRejectModal();
+      await loadTickets();
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to reject ticket.");
+      setRejecting(false);
+    }
+  };
 
   const openResolveModal = (ticketId) => {
     setResolveModal({ open: true, ticketId });
@@ -168,10 +212,10 @@ function TechnicianDashboardPage() {
     setResolving(true);
     try {
       await updateTicketStatus(resolveModal.ticketId, {
-        status: "CLOSED",
+        status: "RESOLVED",
         resolutionNotes: resolutionNotes.trim(),
       });
-      showToast(`Ticket #${resolveModal.ticketId} marked as done and closed.`);
+      showToast(`Ticket #${resolveModal.ticketId} marked as resolved.`);
       setError("");
       closeResolveModal();
       await loadTickets();
@@ -220,8 +264,8 @@ function TechnicianDashboardPage() {
             <HiOutlineExclamationTriangle className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-slate-500">Pending</p>
-            <p className="text-2xl font-bold text-rose-600">{stats.pending}</p>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-slate-500">Pending Accept</p>
+            <p className="text-2xl font-bold text-rose-600">{stats.pendingAccept}</p>
           </div>
         </div>
       </section>
@@ -300,8 +344,10 @@ function TechnicianDashboardPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           options={[
             { value: "ALL", label: "ALL" },
+            { value: "ASSIGNED", label: "PENDING ACCEPT" },
             { value: "IN_PROGRESS", label: "IN PROGRESS" },
-            { value: "CLOSED", label: "DONE" },
+            { value: "RESOLVED", label: "RESOLVED" },
+            { value: "CLOSED", label: "CLOSED" },
           ]}
         />
       </section>
@@ -339,6 +385,28 @@ function TechnicianDashboardPage() {
                   <td className="px-4 py-3 text-xs text-slate-500">{timeAgo(ticket.statusChangedAt)}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      {ticket.status === "ASSIGNED" && (
+                        <>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 hover:border-indigo-400"
+                            title="Accept Assignment"
+                            onClick={() => handleAccept(ticket.id)}
+                          >
+                            <HiOutlineCheckCircle className="h-4 w-4" />
+                            Accept
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 hover:border-rose-400"
+                            title="Reject Assignment"
+                            onClick={() => openRejectModal(ticket.id)}
+                          >
+                            <HiOutlineXMark className="h-4 w-4" />
+                            Reject
+                          </button>
+                        </>
+                      )}
                       {ticket.status === "IN_PROGRESS" && (
                         <button
                           type="button"
@@ -434,9 +502,67 @@ function TechnicianDashboardPage() {
               onClick={handleResolve}
               disabled={resolving}
             >
-              {resolving ? "Closing..." : "Mark as Done"}
+              {resolving ? "Resolving..." : "Mark as Done"}
             </button>
             <button className="btn-secondary" onClick={closeResolveModal}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Reject Modal Overlay */}
+      <div
+        className={`fixed inset-0 z-[70] bg-slate-950/50 transition-opacity duration-250 ${
+          rejectModal.open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={closeRejectModal}
+      />
+
+      {/* Reject Modal */}
+      <div
+        className={`fixed left-1/2 top-1/2 z-[80] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl transition-all duration-300 ${
+          rejectModal.open ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
+        }`}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Reject Assignment</h2>
+            <p className="text-sm text-slate-500">#{rejectModal.ticketId}</p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            onClick={closeRejectModal}
+            aria-label="Close"
+          >
+            <HiOutlineXMark className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Reason for Rejection <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              className="field min-h-32"
+              placeholder="Please provide a valid reason for rejecting this assignment..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={5}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              className="btn-danger flex-1 bg-rose-600 text-white hover:bg-rose-700 rounded-xl px-4 py-2 font-semibold"
+              onClick={handleReject}
+              disabled={rejecting}
+            >
+              {rejecting ? "Rejecting..." : "Reject Assignment"}
+            </button>
+            <button className="btn-secondary" onClick={closeRejectModal}>
               Cancel
             </button>
           </div>

@@ -40,7 +40,7 @@ function AdminDashboardPage() {
         bookingsTotal: bookings.length,
         bookingsPending: bookings.filter((item) => item.status === "PENDING").length,
         ticketsTotal: tickets.length,
-        ticketsOpen: tickets.filter((item) => item.status === "OPEN" || item.status === "IN_PROGRESS").length,
+        ticketsOpen: tickets.filter((item) => item.status === "OPEN" || item.status === "ASSIGNED" || item.status === "IN_PROGRESS").length,
         resourcesTotal: resources.length,
         resourcesActive: resources.filter((item) => item.status === "ACTIVE").length,
       });

@@ -116,6 +116,25 @@ public class TicketController {
         );
     }
 
+    @PatchMapping("/{id}/accept")
+    public Ticket acceptTicket(@PathVariable String id,
+                               @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        currentUserService.requireTechnician(user);
+        return ticketService.acceptTicket(id, user);
+    }
+
+    @PatchMapping("/{id}/reject")
+    public Ticket rejectTicket(@PathVariable String id,
+                               @RequestBody(required = false) TechnicianResponseRequest request,
+                               @AuthenticationPrincipal OAuth2User principal) {
+        User user = currentUserService.requireUser(principal);
+        currentUserService.requireTechnician(user);
+        String reason = (request != null && request.response() != null && !request.response().isBlank())
+                ? request.response() : "No reason provided";
+        return ticketService.rejectTicketAssignment(id, reason, user);
+    }
+
     @PatchMapping("/{id}/response")
     public Ticket addTechnicianResponse(@PathVariable String id,
                                         @Valid @RequestBody TechnicianResponseRequest request,
