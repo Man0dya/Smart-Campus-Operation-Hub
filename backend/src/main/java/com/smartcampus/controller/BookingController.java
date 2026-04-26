@@ -95,8 +95,7 @@ public class BookingController {
     public ResponseEntity<Void> deleteBooking(@PathVariable String id,
                                               @AuthenticationPrincipal OAuth2User principal) {
         User user = currentUserService.requireUser(principal);
-        currentUserService.requireAdmin(user);
-        bookingService.deleteBooking(id, user.getId());
+        bookingService.deleteBooking(id, user.getId(), currentUserService.isAdmin(user));
         return ResponseEntity.noContent().build();
     }
 }

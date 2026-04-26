@@ -11,4 +11,5 @@ export const rejectBooking = (id, reason) =>
   api.patch(`/bookings/${id}/reject`, reason ? { reason } : {});
 export const cancelBooking = (id, reason) =>
   api.patch(`/bookings/${id}/cancel`, reason ? { reason } : {});
+export const deleteBooking = (id) => api.delete(`/bookings/${id}`);
 export const deleteAdminBooking = (id) => api.delete(`/bookings/${id}`);

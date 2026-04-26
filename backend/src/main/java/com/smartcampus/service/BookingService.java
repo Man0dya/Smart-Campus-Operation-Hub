@@ -183,9 +183,20 @@ public class BookingService {
         return saved;
     }
 
-    public void deleteBooking(String bookingId, String actorUserId) {
+    public void deleteBooking(String bookingId, String actorUserId, boolean isAdmin) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
+
+        boolean isOwner = Objects.equals(booking.getUserId(), actorUserId);
+        if (!isAdmin) {
+            if (!isOwner) {
+                throw new ConflictException("You can only delete your own bookings.");
+            }
+
+            if (booking.getStatus() != BookingStatus.PENDING) {
+                throw new ConflictException("Only pending bookings can be deleted.");
+            }
+        }
 
         bookingRepository.deleteById(bookingId);
 
